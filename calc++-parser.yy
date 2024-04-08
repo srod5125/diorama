@@ -1,7 +1,7 @@
 %skeleton "lalr1.cc"
 %require "3.0.4"
 %defines
-%define parser_class_name {calcxx_parser}
+%define api.parser.class {calcxx_parser}
 %define api.token.constructor
 %define api.value.type variant
 %define parse.assert

@@ -13,7 +13,6 @@ static yy::location loc;
 %}
 
 %option nodefault
-%option noyywrap
 %option noyywrap nounput batch debug noinput
 
 id    [a-zA-Z][a-zA-Z_0-9]*
@@ -21,13 +20,13 @@ int   [0-9]+
 blank [ \t]
 
 %{
-#define YY_USER_ACTION loc.columns(yyleng);
+    #define YY_USER_ACTION loc.columns(yyleng);
 %}
 
 %%
 
 %{
-loc.step();
+   loc.step();
 %}
 
 {blank}+ loc.step();
