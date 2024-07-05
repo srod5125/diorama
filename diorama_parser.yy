@@ -1,5 +1,5 @@
 %skeleton "lalr1.cc"
-%require "3.0.4"
+%require "3.8.2"
 %defines
 %define api.parser.class {calcxx_parser}
 %define api.token.constructor
@@ -25,7 +25,7 @@
 
 %code
 {
-  #include "calc++-driver.hpp"
+  #include "diorama_driver.hpp"
 }
 
 %define api.token.prefix {TOK_}

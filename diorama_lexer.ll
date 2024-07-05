@@ -3,8 +3,8 @@
 #include <climits>
 #include <cstdlib>
 #include <string>
-#include "calc++-driver.hpp"
-#include "calc++-parser.hpp"
+#include "diorama_driver.hpp"
+#include "d_parse.hpp"
 
 #undef yywrap
 #define yywrap() 1

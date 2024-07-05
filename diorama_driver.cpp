@@ -1,5 +1,4 @@
-#include "calc++-driver.hpp"
-#include "calc++-parser.hpp"
+#include "diorama_driver.hpp"
 
 calcxx_driver::calcxx_driver()
   : trace_scanning(false)
