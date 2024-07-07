@@ -9,26 +9,28 @@ calcxx_driver::calcxx_driver()
 }
 
 calcxx_driver::~calcxx_driver()
-{
-}
+{}
 
-auto calcxx_driver::parse(const std::string &f) -> int
+int calcxx_driver::parse(const std::string &f)
 {
-  file = f;
+
+  this->file = f;
   scan_begin();
+
   yy::calcxx_parser parser(*this);
   parser.set_debug_level(trace_parsing);
   int res = parser.parse();
+
   scan_end();
   return res;
 }
 
-auto calcxx_driver::error(const yy::location &l, const std::string &m) -> void
+void calcxx_driver::error(const yy::location &l, const std::string &m)
 {
   std::cerr << l << ": " << m << std::endl;
 }
 
-auto calcxx_driver::error(const std::string &m) -> void
+void calcxx_driver::error(const std::string &m)
 {
-  std::cerr << m << std::endl;
+  std::cerr << "Error: " <<  m << std::endl;
 }

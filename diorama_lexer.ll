@@ -43,8 +43,10 @@ blank [ \t]
 {int} {
   errno = 0;
   long n = strtol(yytext, NULL, 10);
+
   if (!(INT_MIN <= n && n<= INT_MAX && errno != ERANGE))
     driver.error(loc, "integer is out of range");
+
   return yy::calcxx_parser::make_NUMBER(n, loc);
 }
 
@@ -57,11 +59,17 @@ blank [ \t]
 void calcxx_driver::scan_begin()
 {
   yy_flex_debug = trace_scanning;
-  if (file.empty() || file == "-")
+
+  if (this->file.empty() || this->file == "-"){
+    
     yyin = stdin;
-  else if (!(yyin = fopen(file.c_str(), "r"))) {
-    error("cannot open " + file + ": " + strerror(errno));
+
+  }
+  else if (!(yyin = fopen(this->file.c_str(), "r"))) {
+
+    error("cannot open " + this->file + ": " + strerror(errno));
     exit(EXIT_FAILURE);
+
   }
 }
 

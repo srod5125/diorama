@@ -16,11 +16,11 @@ public:
   calcxx_driver();
   virtual ~calcxx_driver();
 
-  auto scan_begin() -> void;
-  auto scan_end() -> void;
-  auto parse(const std::string &f) -> int;
-  auto error(const yy::location &l, const std::string &m) -> void;
-  auto error(const std::string &m) -> void;
+  void scan_begin();
+  void scan_end();
+  int parse(const std::string &f);
+  void error(const yy::location &l, const std::string &m);
+  void error(const std::string &m);
   
   std::map<std::string, int> variables;
   int result;

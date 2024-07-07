@@ -6,24 +6,35 @@ LEX_OUT   := d_lex.cpp
 PARSE_OUT := d_parse.cpp
 
 DRIVER := diorama_driver.cpp
+MAIN   := main.cpp
 
-LEX_O   := lexer.o 
-PARSE_O := parser.o
+LEX_O    := lexer.o 
+PARSE_O  := parser.o
+DRIVER_O := driver.o
+MAIN_O   := main.o
 
-ALL := $(LEX_OUT) $(PARSE_OUT) $(DRIVER)
 
+CXXFLAGS := -Wall -Wextra -ggdb
+
+OBJ_DIR := ./objs
+SRC_DIR := ./src
+
+objects := $(wildcard $(OBJ_DIR)/*.o)
 
 #build recipe:
 
-$(LEX_OUT): $(LEX_IN)
-	flex -o $(LEX_OUT) $(LEX_IN)
+$(SRC_DIR)/$(LEX_OUT): $(LEX_IN)
+	flex $(LEX_IN) -o $(SRC_DIR)/$(LEX_OUT)
 
-$(PARSE_OUT) : $(PARSE_IN)
-	bison -o $(PARSE_OUT) $(PARSE_IN)
+$(SRC_DIR)/$(PARSE_OUT) : $(PARSE_IN)
+	bison $(PARSE_IN) -o $(SRC_DIR)/$(PARSE_OUT)
+
+# o files:
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
+	clang++ -c $^ -o $@
 
 
-all: $(ALL)
-	clang++ -g calc++.cpp \
-			$(LEX_OUT) $(PARSE_OUT) \
-			$(DRIVER) \
-			-o grammar
+all: $(objects)
+	clang++ $(CXXFLAGS) \
+		$^ \
+		-o grammar
