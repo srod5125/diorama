@@ -6,6 +6,9 @@ d_parse.hpp
 location.hh
 
 *out
+*.o
+
+objs/*
 
 todo.txt
 
