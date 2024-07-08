@@ -1,6 +1,6 @@
-#line 2 "src/lexer.cpp"
+#line 2 "./src/lexer.cpp"
 
-#line 4 "src/lexer.cpp"
+#line 4 "./src/lexer.cpp"
 
 #define  YY_INT_ALIGNED short int
 
@@ -551,12 +551,12 @@ char *yytext;
   #define yywrap() 1
 
   static yy::location loc;
-#line 555 "src/lexer.cpp"
+#line 555 "./src/lexer.cpp"
 #define YY_NO_INPUT 1
 #line 23 "diorama_lexer.ll"
     #define YY_USER_ACTION loc.columns(yyleng);
-#line 559 "src/lexer.cpp"
-#line 560 "src/lexer.cpp"
+#line 559 "./src/lexer.cpp"
+#line 560 "./src/lexer.cpp"
 
 #define INITIAL 0
 
@@ -842,7 +842,7 @@ YY_DECL
    loc.step();
 
 
-#line 846 "src/lexer.cpp"
+#line 846 "./src/lexer.cpp"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -996,7 +996,7 @@ YY_RULE_SETUP
 #line 60 "diorama_lexer.ll"
 YY_FATAL_ERROR( "flex scanner jammed" );
 	YY_BREAK
-#line 1000 "src/lexer.cpp"
+#line 1000 "./src/lexer.cpp"
 
 	case YY_END_OF_BUFFER:
 		{
