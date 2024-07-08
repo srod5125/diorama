@@ -5,6 +5,10 @@ d_parse.hpp
 
 location.hh
 
+src/lexer.cpp
+src/parser.cpp
+src/parser.hpp
+
 *out
 *.o
 
@@ -13,3 +17,5 @@ objs/*
 todo.txt
 
 test_input.txt
+
+tb
