@@ -1,15 +1,15 @@
 %{
-#include <cerrno>
-#include <climits>
-#include <cstdlib>
-#include <string>
-#include "diorama_driver.hpp"
-#include "d_parse.hpp"
+  #include <cerrno>
+  #include <climits>
+  #include <cstdlib>
+  #include <string>
+  #include "diorama_driver.hpp"
+  #include "parser.hpp"
 
-#undef yywrap
-#define yywrap() 1
+  #undef yywrap
+  #define yywrap() 1
 
-static yy::location loc;
+  static yy::location loc;
 %}
 
 %option nodefault
@@ -49,12 +49,15 @@ blank [ \t]
 
   return yy::calcxx_parser::make_NUMBER(n, loc);
 }
-
+  
 {id}    return yy::calcxx_parser::make_IDENTIFIER(yytext, loc);
+
 .       driver.error (loc, "invalid character");
 
 <<EOF>> return yy::calcxx_parser::make_END(loc);
+
 %%
+
 
 void calcxx_driver::scan_begin()
 {
@@ -63,7 +66,7 @@ void calcxx_driver::scan_begin()
   if (this->file.empty() || this->file == "-"){
     
     yyin = stdin;
-
+ 
   }
   else if (!(yyin = fopen(this->file.c_str(), "r"))) {
 
