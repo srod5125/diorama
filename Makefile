@@ -8,13 +8,17 @@ PARSE_OUT := parser.cpp
 DRIVER := diorama_driver.cpp
 MAIN   := main.cpp
 
-
-CXXFLAGS := -Wall -Wextra -ggdb
+CXX      := clang++
+CXXFLAGS := -Wall -Wextra -std=c++20
+#-ggdb
 
 OBJ_DIR := ./objs
 SRC_DIR := ./src
 
 objects := $(wildcard $(OBJ_DIR)/*.o)
+
+
+.PHONY: clean all
 
 #build recipe:
 
@@ -26,10 +30,27 @@ $(SRC_DIR)/$(PARSE_OUT) : $(PARSE_IN)
 
 # o files:
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
-	clang++ -c $< -o $@
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
+.PRECIOUS: $(objects) $(OBJ_DIR)/main.o
+# 
 
 all: $(objects)
-	clang++ $(CXXFLAGS) \
+	$(CXX) $(CXXFLAGS) \
 		$^ \
+		-I./deps/cvc5/ \
+		-L./deps/ \
+		-lcvc5 \
+		-lcvc5parser \
 		-o tb
+
+
+clean:
+	find $(OBJ_DIR) -type f -delete
+
+
+#TODO: when in release link with static library,
+#TODO: during dev, link with shared 
+
+
+#TODO: touch .o file when one doesnt exists
