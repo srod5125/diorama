@@ -1,0 +1,160 @@
+naming convention for branches:
+    features: f_name_[version]
+    issues  : i_issueNum_[description]
+
+    issue in feature: f_name_[version]/i_issueNum_description
+    sub feature : f_name_[version]/f_name_[version]
+    issue in sub feature f_name_[version]/f_name_[version]/i_issueNum_[description]
+    
+
+----- copilots approach to assignment
+
+from z3 import *
+
+# Define variables
+x, y = Ints('x y')
+s = Solver()
+s.add(x - y > 2, x > 3, y < 4)
+
+# Check if the constraints are satisfiable
+if s.check() == sat:
+    m = s.model()
+    print(f"Original model: x = {m[x]}, y = {m[y]}")
+
+    # Substitute x with a new value (e.g., 10)
+    F1 = x - y < 2
+    substituted_F1 = substitute(F1, (x, IntVal(10)))
+    print(f"Substituted F1 with x = 10: {substituted_F1}")
+
+    # Replace x and y with values assigned by the model
+    substituted_F1_model = substitute(F1, (x, m[x]), (y, m[y]))
+    print(f"Substituted F1 with model values: {substituted_F1_model}")
+else:
+    print("UNSAT")
+----------
+Equality and Uninterpreted Functions (EUF) is a fundamental theory in Z3 that allows reasoning about equality constraints and uninterpreted functions. Here are the key points about EUF in Z3:
+Uninterpreted Functions and Constants
+
+    Uninterpreted functions and constants are declared using the Function and Const commands in Z3
+
+.
+They represent symbols with no predefined interpretation, allowing any interpretation that is consistent with the constraints over the function or constant
+.
+For example, f = Function('f', IntSort(), IntSort()) declares an uninterpreted function f that takes an integer argument and returns an integer
+
+    .
+
+Congruence Rule
+
+    The most important rule to connect terms in EUF is the congruence rule: s1=t1 ... sn=tn (Congruence) f(s1, ..., sn) = f(t1, ..., tn)
+
+It states that two function applications are equal if the functions are the same and their corresponding arguments are equal
+
+    .
+
+Solving EUF Constraints
+
+    Z3 can solve EUF constraints by finding an interpretation (model) that satisfies the given constraints
+
+.
+For example, solve(f(f(x)) == x, f(x) == y, x != y) finds a model where f(0) is 1, f(1) is 0, and f(a) is 1 for all a different from 0 and 1
+
+    .
+
+Applications of EUF
+
+    EUF is often used to prove the equivalence of different implementations of the same algorithms
+
+.
+It can also be used to abstract complex functions in programs by replacing them with uninterpreted functions, making it easier to reason about the programs
+.
+Replacing interpreted functions with uninterpreted functions weakens the formula, so ϕUF → ϕ holds, where ϕUF is ϕ with some functions replaced by uninterpreted functions
+
+    .
+
+In summary, EUF in Z3 provides a way to reason about equality constraints and uninterpreted functions, which is useful for proving program equivalence, abstracting complex functions, and solving constraints involving equality and uninterpreted symbols.
+
+
+https://docs.rs/z3tracer/latest/z3tracer/
+
+
+
+
+zip citation:
+https://stackoverflow.com/questions/5764782/iterate-through-adjacent-pairs-of-items-in-a-python-list
+
+
+functions are declared, with domain & ranges then you construct the terms, finially in the solver assert that the function eqals the term, that way its invocation always corresponds with its application
+
+where_blocks => function, function = then_blocks
+
+
+perplexity: make linear temporal logic using cvc5
+----
+from cvc5 import Solver, Kind
+
+solver = Solver()
+
+# Define sorts
+time_sort = solver.getIntegerSort()
+bool_sort = solver.getBooleanSort()
+
+# Define time variable
+t = solver.mkVar(time_sort, "t")
+
+# Define atomic propositions as unary predicates over time
+p = solver.mkFunctionDecl("p", [time_sort], bool_sort)
+q = solver.mkFunctionDecl("q", [time_sort], bool_sort)
+
+# Define LTL operators
+def G(phi):
+    return solver.mkTerm(Kind.FORALL,
+                         [solver.mkVar(time_sort, "t1")],
+                         solver.mkTerm(Kind.IMPLIES,
+                                       solver.mkTerm(Kind.GEQ, solver.mkVar(time_sort, "t1"), t),
+                                       phi(solver.mkVar(time_sort, "t1"))))
+
+def F(phi):
+    return solver.mkTerm(Kind.EXISTS,
+                         [solver.mkVar(time_sort, "t1")],
+                         solver.mkTerm(Kind.AND,
+                                       solver.mkTerm(Kind.GEQ, solver.mkVar(time_sort, "t1"), t),
+                                       phi(solver.mkVar(time_sort, "t1"))))
+
+def X(phi):
+    return phi(solver.mkTerm(Kind.PLUS, t, solver.mkInteger(1)))
+
+def U(phi, psi):
+    return solver.mkTerm(Kind.EXISTS,
+                         [solver.mkVar(time_sort, "t1")],
+                         solver.mkTerm(Kind.AND,
+                                       solver.mkTerm(Kind.GEQ, solver.mkVar(time_sort, "t1"), t),
+                                       psi(solver.mkVar(time_sort, "t1")),
+                                       solver.mkTerm(Kind.FORALL,
+                                                     [solver.mkVar(time_sort, "t2")],
+                                                     solver.mkTerm(Kind.IMPLIES,
+                                                                   solver.mkTerm(Kind.AND,
+                                                                                 solver.mkTerm(Kind.GEQ, solver.mkVar(time_sort, "t2"), t),
+                                                                                 solver.mkTerm(Kind.LT, solver.mkVar(time_sort, "t2"), solver.mkVar(time_sort, "t1"))),
+                                                                   phi(solver.mkVar(time_sort, "t2"))))))
+
+# Example: Encode G(p -> F(q))
+ltl_property = G(lambda t: solver.mkTerm(Kind.IMPLIES,
+                                         solver.mkTerm(Kind.APPLY_UF, p, t),
+                                         F(lambda t1: solver.mkTerm(Kind.APPLY_UF, q, t1))))
+
+# Assert the LTL property
+solver.assertFormula(ltl_property)
+
+# Check satisfiability
+result = solver.checkSat()
+print("Satisfiability:", result)
+
+if result.isSat():
+    print("Model:")
+    print("p(0) =", solver.getValue(solver.mkTerm(Kind.APPLY_UF, p, solver.mkInteger(0))))
+    print("q(0) =", solver.getValue(solver.mkTerm(Kind.APPLY_UF, q, solver.mkInteger(0))))
+    print("p(1) =", solver.getValue(solver.mkTerm(Kind.APPLY_UF, p, solver.mkInteger(1))))
+    print("q(1) =", solver.getValue(solver.mkTerm(Kind.APPLY_UF, q, solver.mkInteger(1))))
+
+----
