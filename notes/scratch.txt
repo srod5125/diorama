@@ -1,8 +1,0 @@
-(set-logic ALL)
-(declare-fun f () Int)
-(assert (= f 1) ) 
-(declare-fun g () Int)
-(assert (= g 2) )
-(declare-fun e () Int)        
-(assert (= e  (and (+ f g) (+ g 3)) ) )
-(check-sat)
