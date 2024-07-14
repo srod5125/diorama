@@ -14,14 +14,15 @@ CXXFLAGS := -Wall -Wextra -std=c++20
 
 OBJ_DIR := ./objs
 SRC_DIR := ./src
+DEP_DIR := ./deps
 
 objects := $(wildcard $(OBJ_DIR)/*.o)
 
 
-.PHONY: clean all
+.PHONY: clean all debug
+.PRECIOUS: $(objects) $(OBJ_DIR)/main.o
 
-#build recipe:
-
+# --- build recipe: ---
 $(SRC_DIR)/$(LEX_OUT): $(LEX_IN)
 	flex -o $(SRC_DIR)/$(LEX_OUT) $(LEX_IN)
 
@@ -32,21 +33,22 @@ $(SRC_DIR)/$(PARSE_OUT) : $(PARSE_IN)
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-.PRECIOUS: $(objects) $(OBJ_DIR)/main.o
-# 
+$(OBJ_DIR)/main.o : $(SRC_DIR)/main.cpp
+	$(CXX) -c $(CXXFLAGS) $^ -o $@
 
-all: $(objects)
+
+# --- user intsructions ---
+debug: $(objects) $(OBJ_DIR)/main.o
 	$(CXX) $(CXXFLAGS) \
 		$^ \
-		-I./deps/cvc5/ \
-		-L./deps/ \
-		-lcvc5 \
-		-lcvc5parser \
+		-I$(DEP_DIR)cvc5/ \
+		-L$(DEP_DIR) -lcvc5 -lcvc5parser \
 		-o tb
 
 
 clean:
-	find $(OBJ_DIR) -type f -delete
+	find $(OBJ_DIR) -type f -delete && \
+	rm src/lexer.cpp src/parser.cpp src/parser.hpp
 
 
 #TODO: when in release link with static library,
