@@ -36,19 +36,19 @@ $(SRC_DIR)/$(PARSE_OUT) : $(PARSE_IN)
 
 $(OBJ_DIR)/lexer.o : $(SRC_DIR)/$(LEX_OUT)
 	clang++ $(CXXFLAGS) -c  $(SRC_DIR)/$(LEX_OUT) \
-			-o $(OBJ_DIR)/lexer.o
+						-o $(OBJ_DIR)/lexer.o
 
 $(OBJ_DIR)/parser.o : $(SRC_DIR)/$(PARSE_OUT)
 	clang++ $(CXXFLAGS) -c $(SRC_DIR)/$(PARSE_OUT) \
-			-o $(OBJ_DIR)/parser.o
+						-o $(OBJ_DIR)/parser.o
 
 $(OBJ_DIR)/diorama_driver.o : $(SRC_DIR)/diorama_driver.cpp
 	clang++ $(CXXFLAGS) -c  $(SRC_DIR)/diorama_driver.cpp \
-			-o $(OBJ_DIR)/diorama_driver.o
+						-o $(OBJ_DIR)/diorama_driver.o
 
 $(OBJ_DIR)/main.o : $(SRC_DIR)/main.cpp
 	clang++ $(CXXFLAGS) -c  $(SRC_DIR)/main.cpp \
-			-o $(OBJ_DIR)/main.o
+						-o $(OBJ_DIR)/main.o
 
 
 # --- user intsructions ---

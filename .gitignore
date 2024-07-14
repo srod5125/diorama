@@ -13,6 +13,11 @@ src/parser.hpp
 *.o
 
 objs/*
+deps/libcvc5.a
+deps/libcvc5.so
+deps/libcvc5parser.a
+deps/libcvc5parser.so
+
 
 todo.txt
 
