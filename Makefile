@@ -16,7 +16,8 @@ OBJ_DIR := ./objs
 SRC_DIR := ./src
 DEP_DIR := ./deps
 
-objects := $(wildcard $(OBJ_DIR)/*.o)
+objects :=  ./objs/main.o ./objs/parser.o ./objs/lexer.o ./objs/diorama_driver.o 
+#           $(wildcard $(OBJ_DIR)/*.o)
 
 
 .PHONY: clean all debug
@@ -30,15 +31,28 @@ $(SRC_DIR)/$(PARSE_OUT) : $(PARSE_IN)
 	bison -o $(SRC_DIR)/$(PARSE_OUT) $(PARSE_IN) 
 
 # o files:
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+#$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
+#	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+$(OBJ_DIR)/lexer.o : $(SRC_DIR)/$(LEX_OUT)
+	clang++ $(CXXFLAGS) -c  $(SRC_DIR)/$(LEX_OUT) \
+			-o $(OBJ_DIR)/lexer.o
+
+$(OBJ_DIR)/parser.o : $(SRC_DIR)/$(PARSE_OUT)
+	clang++ $(CXXFLAGS) -c $(SRC_DIR)/$(PARSE_OUT) \
+			-o $(OBJ_DIR)/parser.o
+
+$(OBJ_DIR)/diorama_driver.o : $(SRC_DIR)/diorama_driver.cpp
+	clang++ $(CXXFLAGS) -c  $(SRC_DIR)/diorama_driver.cpp \
+			-o $(OBJ_DIR)/diorama_driver.o
 
 $(OBJ_DIR)/main.o : $(SRC_DIR)/main.cpp
-	$(CXX) -c $(CXXFLAGS) $^ -o $@
+	clang++ $(CXXFLAGS) -c  $(SRC_DIR)/main.cpp \
+			-o $(OBJ_DIR)/main.o
 
 
 # --- user intsructions ---
-debug: $(objects) $(OBJ_DIR)/main.o
+debug: $(objects) 
 	$(CXX) $(CXXFLAGS) \
 		$^ \
 		-I$(DEP_DIR)cvc5/ \

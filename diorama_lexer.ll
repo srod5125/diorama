@@ -15,7 +15,7 @@
 %option nodefault
 %option noyywrap nounput batch debug noinput
 
-id    [a-zA-Z][a-zA-Z_0-9]*
+word  [a-zA-Z][a-zA-Z_0-9]*
 int   [0-9]+
 blank [ \t]
 
@@ -40,6 +40,10 @@ blank [ \t]
 ")"  return yy::calcxx_parser::make_RPAREN(loc);
 ":=" return yy::calcxx_parser::make_ASSIGN(loc);
 
+"module" return yy::calcxx_parser::make_MODULE(loc);
+"is"     return yy::calcxx_parser::make_IS(loc);
+"end"     return yy::calcxx_parser::make_END(loc);
+
 {int} {
   errno = 0;
   long n = strtol(yytext, NULL, 10);
@@ -50,11 +54,11 @@ blank [ \t]
   return yy::calcxx_parser::make_NUMBER(n, loc);
 }
   
-{id}    return yy::calcxx_parser::make_IDENTIFIER(yytext, loc);
+{word}    return yy::calcxx_parser::make_WORD(yytext, loc);
 
 .       driver.error (loc, "invalid character");
 
-<<EOF>> return yy::calcxx_parser::make_END(loc);
+<<EOF>> return yy::calcxx_parser::make_EOF(loc);
 
 %%
 
