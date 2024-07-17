@@ -11,26 +11,28 @@ int main(int argc, char **argv)
 
   cvc5::Term t;
 
-  for (int i = 1; i < argc; ++i) {
+  //TODO: implement short arg acceptor later
+  if (argc == 3) {
 
-    if (argv[i] == std::string("-p")){
-
+    if  (argv[1] == std::string("-p")){
       driver.trace_parsing = true;
-    
     }
-    else if (argv[i] == std::string("-s")) {
-    
+    else if (argv[1] == std::string("-s")) {
       driver.trace_scanning = true;
-    
     } 
-    else if (!driver.parse(argv[i])) {
-    
-      std::cout << driver.result << std::endl;
-    }
-    else {
-      res = 1;
-    }
+
+    driver.parse(argv[2]);
+  }
+
+  else if (argc == 2){
+
+    driver.parse(argv[1]);
 
   }
+  else {
+    std::cout << "too little or too many args" << std::endl;
+  }
+
+
   return res;
 }

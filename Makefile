@@ -9,7 +9,7 @@ DRIVER := diorama_driver.cpp
 MAIN   := main.cpp
 
 CXX      := clang++
-CXXFLAGS := -Wall -Wextra -std=c++20
+CXXFLAGS := -Wall -Wextra -std=c++20 -ggdb
 #-ggdb
 
 OBJ_DIR := ./objs
