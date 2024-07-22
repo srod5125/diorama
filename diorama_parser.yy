@@ -34,9 +34,18 @@
 
 }
 
-%define api.token.prefix {TOK_}
+%define api.token.prefix {TOK_} 
 %token
-EOF 0      "end of file"
+EOF 0       "end of file"
+H1          "#"
+H2          "##"
+H3          "###"
+H4          "####"
+H5          "#####"
+BLD         "**"
+MEMBERS     "members" 
+ARE         "are"
+END         "end"
 ASSIGN     ":="
 MINUS      "-"
 PLUS       "+"
@@ -46,14 +55,11 @@ LPAREN     "("
 RPAREN     ")"
 MODULE     "module"
 IS         "is"
-END        "end"
 RECORD     "record"
-ARE        "are"
 COLON      ":"
 COMMA      ","
 GT         "<"
 LT         ">"
-MEMBERS    "members"
 PERIOD     "."
 IN         "in"
 ISSETOF    "is-set-of"
@@ -100,6 +106,7 @@ LBRACE     "{"
 RBRACE     "}"
 FALSE      "false"
 TRUE       "true"
+
 ;
 
 %token <std::string> WORD
@@ -112,7 +119,6 @@ TRUE       "true"
 %start spec_module;
 
 %%
-
 spec_module :  "module" WORD "is" data body "end" WORD
 
 data : wom_schemes members
@@ -142,7 +148,7 @@ named_decl  : WORD either_in_or_is WORD
 set_decl    : WORD "is-set-of" WORD
 array_decl  : WORD "maps" WORD "to" WORD //TODO: second word can be expression
 tuple_decl  : WORD either_in_or_is "(" WORD wom_tuples ")"
-wom_tuples : wom_tuples "," WORD | WORD
+wom_tuples  : wom_tuples "," WORD | WORD
 
 either_in_or_is : "in" | "is"
 
@@ -172,7 +178,7 @@ then_blocks : wom_then_blocks
 wom_then_blocks : wom_then_blocks "or" then_block | then_block
 when_block : "when" zow_quantifier ":" zom_determining_exprs
 zow_quantifier : %empty | quantifier
-zom_determining_exprs : %empty | zom_determining_exprs "-" expr "."
+zom_determining_exprs : %empty | zom_determining_exprs determining_exprs
 then_block : "then" ":" wom_stmts
 wom_stmts : wom_stmts stmt | stmt
 
@@ -260,6 +266,7 @@ tuple_val : "(" wom_atom  ")"
 wom_atom : wom_atom "," atom | atom
 
 
+//TODO: ensure members can only be declared once
 
 %%
 

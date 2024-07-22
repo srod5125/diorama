@@ -17,13 +17,15 @@
 %option nodefault
 %option noyywrap nounput batch debug noinput
 
+comment [/][*][^*]*[*]+([^*/][^*]*[*]+)*[/]
 word    [a-zA-Z][a-zA-Z_0-9]*
 int     [0-9]+
 float   {int}\.{int}
 blank   [ \t]
 
-comment \(\*[\s\S]*?\*\)
-/*     ex: (* some comment *) */
+
+/* ex: (* some comment *) */
+/*   \(\*[\s\S]*?\*\)   */
 
 %{
     #define YY_USER_ACTION loc.columns(yyleng);
@@ -34,12 +36,20 @@ comment \(\*[\s\S]*?\*\)
 %{
    loc.step();
 %}
-  /*{comment} {loc.lines(yyleng); printf("x"); loc.step();}*/
 
-
+{comment} loc.lines(yyleng); loc.step();
 {blank}+  loc.step();
 [\n]+     loc.lines(yyleng); loc.step();
 
+
+
+          
+"#"           return yy::calcxx_parser::make_H1(loc);
+"##"          return yy::calcxx_parser::make_H2(loc);
+"###"         return yy::calcxx_parser::make_H3(loc);
+"####"        return yy::calcxx_parser::make_H4(loc);
+"#####"       return yy::calcxx_parser::make_H5(loc);
+"**"          return yy::calcxx_parser::make_BLD(loc);
 
 
 "-"  return yy::calcxx_parser::make_MINUS(loc);
@@ -108,14 +118,14 @@ comment \(\*[\s\S]*?\*\)
 "false"           return yy::calcxx_parser::make_FALSE(loc);
 "true"            return yy::calcxx_parser::make_TRUE(loc);
 
+
 {int} {
   errno = 0;
   long n = strtol(yytext, NULL, 10);
 
-  if(!(INT_MIN <= n && n<= INT_MAX && errno != ERANGE))
+  if(!(INT_MIN <= n && n<= INT_MAX && errno != ERANGE)){
     driver.error(loc, "integer is out of range");
-
-  std::cout << n << " n " << std::endl;
+  }
 
   return yy::calcxx_parser::make_INT(n, loc);
 }
@@ -127,7 +137,7 @@ comment \(\*[\s\S]*?\*\)
   
 {word}  { return yy::calcxx_parser::make_WORD(yytext, loc); }
 
-.       { driver.error(loc, "invalid character"); }
+.       { }
 
 <<EOF>> { return yy::calcxx_parser::make_EOF(loc); }
 
