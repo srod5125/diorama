@@ -117,12 +117,13 @@ TRUE       "true"
                         
 %printer { yyoutput << $$; } <*>;
 
-%start spec_module;
+%start spec;
 
 %%
-spec_module :  "module" WORD "is" data body "end" WORD {
-    driver.PHASE += 1;
-}
+
+spec : module
+
+module :  "module" WORD "is" data body "end" WORD
 
 data : wom_schemes members
 body : inits zom_rules

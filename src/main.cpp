@@ -18,18 +18,17 @@ int main(int argc, char **argv)
       driver.trace_scanning = true;
     } 
 
-    //for (int phase=1;phase<4;phase+=1){
-    //  driver.parse(argv[2]);
-    //}
-    driver.parse(argv[2]);
-
-    std::cout << driver.PHASE << std::endl;
 
   }
 
   else if (argc == 2){
 
-    driver.parse(argv[1]);
+    for ( int i=driver.PHASE; i<=2; i+=1 ) {
+      driver.parse(argv[1]);
+      driver.PHASE += 1;
+    }
+
+    std::cout << driver.PHASE << std::endl;
 
   }
   else {

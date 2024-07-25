@@ -28,6 +28,10 @@ objects :=  $(wildcard $(OBJ_DIR)/*.o)
 .PHONY: clean all debug
 .PRECIOUS: $(objects) $(OBJ_DIR)/main.o
 
+# helper function
+create_file = $([ ! -f $(1) ] && touch $(1))
+
+
 # --- build recipe: ---
 $(SRC_DIR)/$(LEX_OUT): $(LEX_IN)
 	flex -o $(SRC_DIR)/$(LEX_OUT) $(LEX_IN)
@@ -40,18 +44,22 @@ $(SRC_DIR)/$(PARSE_OUT) : $(PARSE_IN)
 #	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 $(OBJ_DIR)/lexer.o : $(SRC_DIR)/$(LEX_OUT)
+	$(call create_file,$@)
 	$(CXX) $(CXXFLAGS) -c $(SRC_DIR)/$(LEX_OUT) \
 					   -o $(OBJ_DIR)/lexer.o
 
 $(OBJ_DIR)/parser.o : $(SRC_DIR)/$(PARSE_OUT)
+	$(call create_file,$@)
 	$(CXX) $(CXXFLAGS) -c $(SRC_DIR)/$(PARSE_OUT) \
 					   -o $(OBJ_DIR)/parser.o
 
 $(OBJ_DIR)/diorama_driver.o : $(SRC_DIR)/$(DRIVER_CPP) $(SRC_DIR)/$(DRIVER_HPP)
+	$(call create_file,$@)
 	$(CXX) $(CXXFLAGS) -c $(SRC_DIR)/$(DRIVER_CPP) \
 					   -o $(OBJ_DIR)/diorama_driver.o
 
 $(OBJ_DIR)/main.o : $(SRC_DIR)/main.cpp
+	$(call create_file,$@)
 	$(CXX) $(CXXFLAGS) -c  $(SRC_DIR)/main.cpp \
 					   -o $(OBJ_DIR)/main.o
 
