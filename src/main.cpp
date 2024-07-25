@@ -1,15 +1,12 @@
 #include <iostream>
 #include "diorama_driver.hpp"
 
-#include "cvc5/cvc5.h"
 
 
 int main(int argc, char **argv)
 {
   int res = 0;
   calcxx_driver driver;
-
-  cvc5::Term t;
 
   //TODO: implement short arg acceptor later
   if (argc == 3) {
@@ -21,7 +18,13 @@ int main(int argc, char **argv)
       driver.trace_scanning = true;
     } 
 
+    //for (int phase=1;phase<4;phase+=1){
+    //  driver.parse(argv[2]);
+    //}
     driver.parse(argv[2]);
+
+    std::cout << driver.PHASE << std::endl;
+
   }
 
   else if (argc == 2){
@@ -32,6 +35,8 @@ int main(int argc, char **argv)
   else {
     std::cout << "too little or too many args" << std::endl;
   }
+
+  //std::cout << "res: " << driver.slv.checkSat() << std::endl;
 
 
   return res;

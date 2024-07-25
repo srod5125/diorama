@@ -5,10 +5,12 @@ PARSE_IN := diorama_parser.yy
 LEX_OUT   := lexer.cpp
 PARSE_OUT := parser.cpp
 
-DRIVER := diorama_driver.cpp
+DRIVER_CPP := diorama_driver.cpp
+DRIVER_HPP := diorama_driver.hpp
+
 MAIN   := main.cpp
 
-CXX      := clang++
+CXX      := clang++-19
 CXXFLAGS := -Wall -Wextra -std=c++20 -ggdb
 #-ggdb
 
@@ -16,8 +18,11 @@ OBJ_DIR := ./objs
 SRC_DIR := ./src
 DEP_DIR := ./deps
 
-objects :=  ./objs/main.o ./objs/parser.o ./objs/lexer.o ./objs/diorama_driver.o 
-#           $(wildcard $(OBJ_DIR)/*.o)
+objects :=  $(wildcard $(OBJ_DIR)/*.o)
+# ./objs/main.o  \
+# ./objs/parser.o  \
+# ./objs/lexer.o \
+# ./objs/diorama_driver.o 
 
 
 .PHONY: clean all debug
@@ -35,25 +40,25 @@ $(SRC_DIR)/$(PARSE_OUT) : $(PARSE_IN)
 #	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 $(OBJ_DIR)/lexer.o : $(SRC_DIR)/$(LEX_OUT)
-	clang++ $(CXXFLAGS) -c  $(SRC_DIR)/$(LEX_OUT) \
-						-o $(OBJ_DIR)/lexer.o
+	$(CXX) $(CXXFLAGS) -c $(SRC_DIR)/$(LEX_OUT) \
+					   -o $(OBJ_DIR)/lexer.o
 
 $(OBJ_DIR)/parser.o : $(SRC_DIR)/$(PARSE_OUT)
-	clang++ $(CXXFLAGS) -c $(SRC_DIR)/$(PARSE_OUT) \
-						-o $(OBJ_DIR)/parser.o
+	$(CXX) $(CXXFLAGS) -c $(SRC_DIR)/$(PARSE_OUT) \
+					   -o $(OBJ_DIR)/parser.o
 
-$(OBJ_DIR)/diorama_driver.o : $(SRC_DIR)/diorama_driver.cpp
-	clang++ $(CXXFLAGS) -c  $(SRC_DIR)/diorama_driver.cpp \
-						-o $(OBJ_DIR)/diorama_driver.o
+$(OBJ_DIR)/diorama_driver.o : $(SRC_DIR)/$(DRIVER_CPP) $(SRC_DIR)/$(DRIVER_HPP)
+	$(CXX) $(CXXFLAGS) -c $(SRC_DIR)/$(DRIVER_CPP) \
+					   -o $(OBJ_DIR)/diorama_driver.o
 
 $(OBJ_DIR)/main.o : $(SRC_DIR)/main.cpp
-	clang++ $(CXXFLAGS) -c  $(SRC_DIR)/main.cpp \
-						-o $(OBJ_DIR)/main.o
+	$(CXX) $(CXXFLAGS) -c  $(SRC_DIR)/main.cpp \
+					   -o $(OBJ_DIR)/main.o
 
 
 # --- user intsructions ---
 debug: $(objects) 
-	$(CXX) $(CXXFLAGS) \
+	$(CXX) $(CXXFLAGS) -Wcounterexamples \
 		$^ \
 		-I$(DEP_DIR)cvc5/ \
 		-L$(DEP_DIR) -lcvc5 -lcvc5parser \

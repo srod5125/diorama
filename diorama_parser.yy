@@ -26,6 +26,7 @@
 %code
 {
   #include "diorama_driver.hpp"
+  #include <cvc5/cvc5.h>
 
   // zom = zero or more
   // wom = one  or more
@@ -119,7 +120,9 @@ TRUE       "true"
 %start spec_module;
 
 %%
-spec_module :  "module" WORD "is" data body "end" WORD
+spec_module :  "module" WORD "is" data body "end" WORD {
+    driver.PHASE += 1;
+}
 
 data : wom_schemes members
 body : inits zom_rules
@@ -144,7 +147,7 @@ declaration : named_decl "."
             | array_decl "."
             | tuple_decl "."
 
-named_decl  : WORD either_in_or_is WORD
+named_decl  : WORD either_in_or_is WORD 
 set_decl    : WORD "is-set-of" WORD
 array_decl  : WORD "maps" WORD "to" WORD //TODO: second word can be expression
 tuple_decl  : WORD either_in_or_is "(" WORD wom_tuples ")"
@@ -267,6 +270,7 @@ wom_atom : wom_atom "," atom | atom
 
 
 //TODO: ensure members can only be declared once
+//TODO: -Wcounterexamples
 
 %%
 

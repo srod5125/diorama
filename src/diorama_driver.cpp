@@ -1,11 +1,14 @@
 #include "diorama_driver.hpp"
+#include <cvc5/cvc5.h>
 
 calcxx_driver::calcxx_driver()
-  : trace_scanning(false)
-  , trace_parsing(false)
+  : trace_scanning{false},
+    trace_parsing{false},
+    PHASE{1}
 {
-  variables["one"] = 1;
-  variables["two"] = 2;
+  this->slv = std::make_unique<cvc5::Solver>();
+  this->slv->setLogic("ALL");
+  this->slv->setOption("produce-models", "true");
 }
 
 calcxx_driver::~calcxx_driver()
@@ -20,6 +23,8 @@ int calcxx_driver::parse(const std::string &f)
   yy::calcxx_parser parser(*this);
   parser.set_debug_level(trace_parsing);
   int res = parser.parse();
+  // 0 if parse succeful
+
 
   scan_end();
   return res;
