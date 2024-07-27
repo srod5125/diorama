@@ -37,7 +37,8 @@ $(SRC_DIR)/$(LEX_OUT): $(LEX_IN)
 	flex -o $(SRC_DIR)/$(LEX_OUT) $(LEX_IN)
 
 $(SRC_DIR)/$(PARSE_OUT) : $(PARSE_IN)
-	bison -o $(SRC_DIR)/$(PARSE_OUT) $(PARSE_IN) 
+	bison -Wcounterexamples --verbose -o $(SRC_DIR)/$(PARSE_OUT) $(PARSE_IN) 
+#         -Wcounterexamples
 
 # o files:
 #$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
@@ -66,7 +67,7 @@ $(OBJ_DIR)/main.o : $(SRC_DIR)/main.cpp
 
 # --- user intsructions ---
 debug: $(objects) 
-	$(CXX) $(CXXFLAGS) -Wcounterexamples \
+	$(CXX) $(CXXFLAGS) \
 		$^ \
 		-I$(DEP_DIR)cvc5/ \
 		-L$(DEP_DIR) -lcvc5 -lcvc5parser \
@@ -83,3 +84,12 @@ clean:
 
 
 #TODO: touch .o file when one doesnt exists
+
+
+
+
+
+#clang++-19 -c src/parser.cpp -o objs/parser.o
+#clang++-19 -c src/diorama_driver.cpp -o objs/diorama_driver.o
+#clang++-19 -c src/lexer.cpp -o objs/lexer.o 
+#clang++-19 -c src/main.cpp -o objs/main.o 

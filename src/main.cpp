@@ -23,12 +23,10 @@ int main(int argc, char **argv)
 
   else if (argc == 2){
 
-    for ( int i=driver.PHASE; i<=2; i+=1 ) {
+    while ( driver.p != end ) {
       driver.parse(argv[1]);
-      driver.PHASE += 1;
+      driver.next_phase();
     }
-
-    std::cout << driver.PHASE << std::endl;
 
   }
   else {

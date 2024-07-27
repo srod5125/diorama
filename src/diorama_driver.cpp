@@ -1,14 +1,21 @@
+#include <assert.h>
+
 #include "diorama_driver.hpp"
 #include <cvc5/cvc5.h>
 
 calcxx_driver::calcxx_driver()
   : trace_scanning{false},
     trace_parsing{false},
-    PHASE{1}
+    p{phase1}
 {
   this->slv = std::make_unique<cvc5::Solver>();
   this->slv->setLogic("ALL");
   this->slv->setOption("produce-models", "true");
+
+
+  aux_string_to_sort_map.emplace("int", this->slv->getIntegerSort() );
+  aux_string_to_sort_map.emplace("bool", this->slv->getBooleanSort() );
+
 }
 
 calcxx_driver::~calcxx_driver()
@@ -39,3 +46,14 @@ void calcxx_driver::error(const std::string &m)
 {
   std::cerr << "Error: " <<  m << std::endl;
 }
+
+
+ void calcxx_driver::next_phase(){
+
+    if ( this->p != end ){
+        this->p = (PHASE)(this->p+1);
+    }
+
+    PHASE beyond_end = (PHASE)(end+1);
+    assert(this->p != beyond_end);
+ }

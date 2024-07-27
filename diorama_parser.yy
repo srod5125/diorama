@@ -8,8 +8,15 @@
 
 %code requires
 {
-  #include <string>
   class calcxx_driver;
+
+  #include <string>
+  #include <utility>
+  #include <variant>
+  #include <cvc5/cvc5.h>
+	
+
+  using sort_or_string = std::variant<std::string,cvc5::Sort>;
 }
 
 %param { calcxx_driver& driver }
@@ -26,7 +33,6 @@
 %code
 {
   #include "diorama_driver.hpp"
-  #include <cvc5/cvc5.h>
 
   // zom = zero or more
   // wom = one  or more
@@ -107,17 +113,22 @@ LBRACE     "{"
 RBRACE     "}"
 FALSE      "false"
 TRUE       "true"
-
 ;
+
+
 
 %token <std::string> WORD
 %token <int> INT 
 %token <float> FLOAT
 
-                        
+
+%type <std::pair<std::string,sort_or_string>> named_decl 
+
+
+%printer { yyoutput << "booty"; } <std::pair<std::string,sort_or_string>>;
 %printer { yyoutput << $$; } <*>;
 
-%start spec;
+%start spec
 
 %%
 
@@ -148,7 +159,28 @@ declaration : named_decl "."
             | array_decl "."
             | tuple_decl "."
 
-named_decl  : WORD either_in_or_is WORD 
+named_decl  : WORD either_in_or_is WORD {    
+    
+    switch (driver.p)
+      {
+          case phase1:{
+            std::string name {$1};
+            std::string sort_string {$3};
+            
+            if ( ! aux_string_to_sort_map.contains(sort_string) ){
+                aux_string_to_sort_map[sort_string] = \
+                std::variant<string>{sort_string};
+            }
+
+            aux_field_to_sort_map[name] = aux_string_to_sort_map[sort_string];
+            
+            break;
+          }
+        
+        default: break;
+      }
+      
+};
 set_decl    : WORD "is-set-of" WORD
 array_decl  : WORD "maps" WORD "to" WORD //TODO: second word can be expression
 tuple_decl  : WORD either_in_or_is "(" WORD wom_tuples ")"
