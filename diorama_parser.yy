@@ -13,15 +13,25 @@
   #include <string>
   #include <utility>
   #include <variant>
+  #include <vector>
   #include <cvc5/cvc5.h>
 	
 
-  using sort_or_string = std::variant<std::string,cvc5::Sort>;
+  //since the parser is the root dependency
+  //any global aliases are better placed here
+  using sort_or_string = std::variant<
+      std::string,
+      std::pair<std::string,std::string>,
+      cvc5::Sort
+    >;
+  using pair_string_sort = std::pair<std::string,sort_or_string>;
 }
+
 
 %param { calcxx_driver& driver }
 
 %locations
+
 %initial-action
 {
   @$.begin.filename = @$.end.filename = &driver.file;
@@ -122,10 +132,17 @@ TRUE       "true"
 %token <float> FLOAT
 
 
-%type <std::pair<std::string,sort_or_string>> named_decl 
+%type <pair_string_sort> named_decl 
+%type <pair_string_sort> set_decl 
+%type <pair_string_sort> array_decl 
+%type <pair_string_sort> tuple_decl 
+%type <pair_string_sort> record_decl
+%type <pair_string_sort> enum_decl
 
+%type <std::vector<std::string>> wom_enums
 
-%printer { yyoutput << "booty"; } <std::pair<std::string,sort_or_string>>;
+%printer { yyoutput << "many"; } <std::vector<std::string>>;
+%printer { yyoutput << "booty"; } <pair_string_sort>;
 %printer { yyoutput << $$; } <*>;
 
 %start spec
@@ -147,9 +164,49 @@ record_decl : "record" WORD "are" wom_record_row "end" "record"
 wom_record_row : wom_record_row "," record_row | record_row
 record_row :  WORD ":" WORD
 
-enum_decl : WORD "are" "<" wom_enums ">"
-wom_enums : wom_enums "," WORD | WORD
+enum_decl : WORD "are" "<" wom_enums ">" {
+              switch (driver.p) {
+                case phase1: {
 
+                  auto enum_spec = driver.slv->mkDatatypeDecl($1);
+
+                  std::vector<cvc5::DatatypeConstructorDecl> enum_ctrs;
+                  for (const auto& val: $4){
+                      enum_ctrs.emplace_back(
+                        driver.slv->mkDatatypeConstructorDecl(val)
+                      );
+                  }
+
+                  for (const auto& ctor: enum_ctrs){
+                      enum_spec.addConstructor(ctor);
+                  }
+
+                  auto enum_sort = driver.slv->mkDatatypeSort(enum_spec);
+                  $$ = std::make_pair($1,enum_sort);
+                }
+                break;
+                default: break;
+              }
+};
+wom_enums : wom_enums "," WORD {
+              switch (driver.p) {
+                case phase1: {
+                  $$.emplace_back($3);
+                }
+                break;
+                default: break;
+              }
+          };
+          | WORD {
+            switch (driver.p) {
+              case phase1: {
+                std::vector<std::string> t;
+                t.emplace_back($1);
+                $$ = t;
+              } break;
+                default: break;
+            }
+          };
 
 
 members : "members" "are" wom_decleration "end" "members"
@@ -159,32 +216,88 @@ declaration : named_decl "."
             | array_decl "."
             | tuple_decl "."
 
-named_decl  : WORD either_in_or_is WORD {    
-    
+named_decl : WORD either_in_or_is WORD {    
     switch (driver.p)
-      {
-          case phase1:{
-            std::string name {$1};
-            std::string sort_string {$3};
-            
-            if ( ! aux_string_to_sort_map.contains(sort_string) ){
-                aux_string_to_sort_map[sort_string] = \
-                std::variant<string>{sort_string};
-            }
+    {
+        case phase1: {
+          std::string name {$1};
+          std::string sort_string {$3};
+          
+          if ( ! driver.aux_string_sort_map.contains(sort_string) ){
 
-            aux_field_to_sort_map[name] = aux_string_to_sort_map[sort_string];
-            
-            break;
+              std::variant<std::string,std::pair<std::string,std::string>,cvc5::Sort> 
+              sort_t{sort_string};
+
+              $$ = std::make_pair(name,sort_t);
           }
-        
-        default: break;
-      }
+          else {
+              $$ = std::make_pair(
+                name,
+                std::get<cvc5::Sort>(driver.aux_string_sort_map[sort_string])
+              );
+          }
+          
+        }
+        break;
+      
+      default: break;
+    }
       
 };
-set_decl    : WORD "is-set-of" WORD
-array_decl  : WORD "maps" WORD "to" WORD //TODO: second word can be expression
-tuple_decl  : WORD either_in_or_is "(" WORD wom_tuples ")"
-wom_tuples  : wom_tuples "," WORD | WORD
+set_decl : WORD "is-set-of" WORD {
+    switch (driver.p)
+    {
+        case phase1: {
+          std::string name {$1};
+          std::string sort_string {$3};
+          
+          if ( ! driver.aux_string_sort_map.contains(sort_string) ){
+              $$ = std::make_pair(name,sort_string);
+          }
+          else {
+              auto set_sort = driver.slv->mkSetSort(
+                std::get<cvc5::Sort>(driver.aux_string_sort_map[sort_string])
+              );
+              $$ = std::make_pair(name,set_sort);
+          }
+          
+        }
+        break;
+      default: break;
+    }
+
+};
+//TODO: second word can be expression
+array_decl  : WORD "maps" WORD "to" WORD {
+   switch (driver.p)
+    {
+        case phase1: {
+          std::string name {$1};
+          std::string dom_string {$3};
+          std::string rng_string {$3};
+
+          if ( ! driver.aux_string_sort_map.contains(dom_string) &&
+               ! driver.aux_string_sort_map.contains(rng_string) ){
+
+                auto array_string = std::make_pair(dom_string,rng_string);
+                $$ = std::make_pair(name,array_string);
+          }
+          else {
+
+            auto array_sort = driver.slv->mkArraySort(
+              std::get<cvc5::Sort>(driver.aux_string_sort_map[dom_string]),
+              std::get<cvc5::Sort>(driver.aux_string_sort_map[rng_string])
+            );
+
+            $$ = std::make_pair(name,array_sort);
+          }
+        }
+        break;
+      default: break;
+    }
+};
+tuple_decl  : WORD either_in_or_is "(" wom_elements ")"
+wom_elements  : WORD | wom_elements "," WORD
 
 either_in_or_is : "in" | "is"
 

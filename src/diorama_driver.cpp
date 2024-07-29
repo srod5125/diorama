@@ -13,8 +13,10 @@ calcxx_driver::calcxx_driver()
   this->slv->setOption("produce-models", "true");
 
 
-  aux_string_to_sort_map.emplace("int", this->slv->getIntegerSort() );
-  aux_string_to_sort_map.emplace("bool", this->slv->getBooleanSort() );
+
+
+  this->aux_string_sort_map["int"]  = this->slv->getIntegerSort();
+  this->aux_string_sort_map["bool"] = this->slv->getBooleanSort();
 
 }
 

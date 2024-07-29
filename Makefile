@@ -19,6 +19,7 @@ SRC_DIR := ./src
 DEP_DIR := ./deps
 
 objects :=  $(wildcard $(OBJ_DIR)/*.o)
+sources :=  $(wildcard $(SRC_DIR)/*)
 # ./objs/main.o  \
 # ./objs/parser.o  \
 # ./objs/lexer.o \
@@ -26,7 +27,7 @@ objects :=  $(wildcard $(OBJ_DIR)/*.o)
 
 
 .PHONY: clean all debug
-.PRECIOUS: $(objects) $(OBJ_DIR)/main.o
+.PRECIOUS: $(objects) $(OBJ_DIR)/%.o
 
 # helper function
 create_file = $([ ! -f $(1) ] && touch $(1))
@@ -37,7 +38,8 @@ $(SRC_DIR)/$(LEX_OUT): $(LEX_IN)
 	flex -o $(SRC_DIR)/$(LEX_OUT) $(LEX_IN)
 
 $(SRC_DIR)/$(PARSE_OUT) : $(PARSE_IN)
-	bison -Wcounterexamples --verbose -o $(SRC_DIR)/$(PARSE_OUT) $(PARSE_IN) 
+	$(call create_file,$@)
+	bison -o $(SRC_DIR)/$(PARSE_OUT) $(PARSE_IN) 
 #         -Wcounterexamples
 
 # o files:
@@ -66,9 +68,9 @@ $(OBJ_DIR)/main.o : $(SRC_DIR)/main.cpp
 
 
 # --- user intsructions ---
-debug: $(objects) 
+debug: $(sources) $(objects)
 	$(CXX) $(CXXFLAGS) \
-		$^ \
+		  $(objects) \
 		-I$(DEP_DIR)cvc5/ \
 		-L$(DEP_DIR) -lcvc5 -lcvc5parser \
 		-o tb
@@ -88,8 +90,8 @@ clean:
 
 
 
-
-#clang++-19 -c src/parser.cpp -o objs/parser.o
-#clang++-19 -c src/diorama_driver.cpp -o objs/diorama_driver.o
-#clang++-19 -c src/lexer.cpp -o objs/lexer.o 
-#clang++-19 -c src/main.cpp -o objs/main.o 
+#bison -o src/parser.cpp diorama_parser.yy
+#clang++-19 --std=c++20 -c src/parser.cpp -o objs/parser.o
+#clang++-19 --std=c++20 -c src/diorama_driver.cpp -o objs/diorama_driver.o
+#clang++-19 --std=c++20 -c src/lexer.cpp -o objs/lexer.o 
+#clang++-19 --std=c++20 -c src/main.cpp -o objs/main.o 

@@ -22,7 +22,6 @@ enum PHASE {
 };
 
 
-using sort_or_string = std::variant<std::string,cvc5::Sort>;
 
 class calcxx_driver
 {
@@ -37,12 +36,7 @@ public:
 
   // constrain solver fields
   std::unique_ptr<cvc5::Solver> slv;
-  cvc5::Term members;
-
-  //solver auxillary & helper fields
-  std::unordered_map<std::string,sort_or_string> aux_string_to_sort_map;
-  std::unordered_map<std::string,sort_or_string> aux_field_to_sort_map;
-
+  cvc5::Term members; 
   
 
   calcxx_driver();
@@ -55,7 +49,13 @@ public:
   void error(const std::string &m);
 
   void next_phase();
+
+
+
+  //auxillary & helper member
+  std::unordered_map<std::string,sort_or_string> aux_string_sort_map;
   
 };
+
 
 #endif 

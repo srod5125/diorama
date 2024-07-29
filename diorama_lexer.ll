@@ -5,8 +5,8 @@
   #include <string>
   #include <string>
   #include <iostream>
-  #include "diorama_driver.hpp"
   #include "parser.hpp"
+  #include "diorama_driver.hpp"
   
   #undef yywrap
   #define yywrap() 1
@@ -135,7 +135,10 @@ blank   [ \t]
   return yy::calcxx_parser::make_FLOAT(f,loc);
 }
   
-{word}  { return yy::calcxx_parser::make_WORD(yytext, loc); }
+{word}  { 
+  //TODO: return word lowered
+  return yy::calcxx_parser::make_WORD(yytext, loc); 
+}
 
 .       { }
 

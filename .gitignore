@@ -31,3 +31,6 @@ temp/*
 
 notes
 notes/*
+
+src/parser.output
+parser.output
