@@ -81,6 +81,10 @@ clean:
 	rm src/lexer.cpp src/parser.cpp src/parser.hpp
 
 
+parse:
+	bison -o src/parser.cpp diorama_parser.yy && \
+	clang++-19 --std=c++20 -c src/parser.cpp -o objs/parser.o
+
 #TODO: when in release link with static library,
 #TODO: during dev, link with shared 
 

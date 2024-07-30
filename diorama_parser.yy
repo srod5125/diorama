@@ -14,6 +14,7 @@
   #include <utility>
   #include <variant>
   #include <vector>
+  #include <unordered_map>
   #include <cvc5/cvc5.h>
 	
 
@@ -25,6 +26,12 @@
       cvc5::Sort
     >;
   using pair_string_sort = std::pair<std::string,sort_or_string>;
+
+  using record_map_var = std::unordered_map<
+    std::string,
+    std::variant<std::string,cvc5::Sort>
+  >;
+
 }
 
 
@@ -140,9 +147,13 @@ TRUE       "true"
 %type <pair_string_sort> enum_decl
 
 %type <std::vector<std::string>> wom_enums
+%type <std::vector<std::pair<std::string,std::string>>> wom_record_row
+%type <std::pair<std::string,std::string>> record_row
 
-%printer { yyoutput << "many"; } <std::vector<std::string>>;
-%printer { yyoutput << "booty"; } <pair_string_sort>;
+%printer { yyoutput << "todo"; } <std::pair<std::string,std::string>>;
+%printer { yyoutput << "todo"; } <std::vector<std::pair<std::string,std::string>>>;
+%printer { yyoutput << "todo"; } <std::vector<std::string>>;
+%printer { yyoutput << "todo"; } <pair_string_sort>;
 %printer { yyoutput << $$; } <*>;
 
 %start spec
@@ -160,53 +171,132 @@ wom_schemes : wom_schemes scheme | scheme
 scheme : record_decl
        | enum_decl
 
-record_decl : "record" WORD "are" wom_record_row "end" "record"
-wom_record_row : wom_record_row "," record_row | record_row
-record_row :  WORD ":" WORD
+record_decl : "record" WORD "are" wom_record_row "end" "record" {
+     switch (driver.p) {
+      case phase1: {
+
+        //TODO: cover already declared case
+        //for now we assume it hasnt already been declared
+
+        record_map_var record_var;
+        bool all_sorts_known = true;
+
+        for (const auto & row: $4){
+            if ( driver.aux_string_sort_map.contains(row.second) ){
+                record_var[row.first] = std::get<cvc5::Sort>(
+                  driver.aux_string_sort_map[row.second]
+                );
+            }
+            else {
+                record_var[row.first] = row.second;
+                all_sorts_known = false;
+            }
+        }
+        // we declare & construct a record of the sort 
+        // that is composed of known sorts
+        if ( all_sorts_known ) {
+
+            auto rec_decl = driver.slv->mkDatatypeDecl($2);
+            auto fields = driver.slv->mkDatatypeConstructorDecl("fields");
+
+            for (const auto & [ field, sort ] : record_var) {
+                fields.addSelector(field, std::get<cvc5::Sort>(sort));
+            }
+
+            rec_decl.addConstructor(fields);
+
+            auto rec_sort = driver.slv->mkDatatypeSort(rec_decl);
+
+            driver.aux_string_sort_map[$2] = rec_sort;
+
+        }
+        //else we append to auxiallry map
+        else {
+
+          driver.aux_string_rec_map[$2] = record_var;
+
+        }
+
+
+
+      };
+      break;
+      default: break;
+    }
+};
+wom_record_row : wom_record_row "," record_row {
+   switch (driver.p) {
+      case phase1: {
+        $$.emplace_back($3);
+      };
+      break;
+      default: break;
+    }
+}; | record_row {
+   switch (driver.p) {
+      case phase1: {
+        std::vector<std::pair<std::string,std::string>> t;
+        t.emplace_back($1);
+        $$=t;
+      };
+      break;
+      default: break;
+    }
+};
+
+record_row :  WORD ":" WORD {
+   switch (driver.p) {
+      case phase1: {
+        $$ = std::make_pair($1,$3);
+      };
+      break;
+      default: break;
+    }
+};
 
 enum_decl : WORD "are" "<" wom_enums ">" {
-              switch (driver.p) {
-                case phase1: {
+          switch (driver.p) {
+            case phase1: {
 
-                  auto enum_spec = driver.slv->mkDatatypeDecl($1);
+              auto enum_spec = driver.slv->mkDatatypeDecl($1);
 
-                  std::vector<cvc5::DatatypeConstructorDecl> enum_ctrs;
-                  for (const auto& val: $4){
-                      enum_ctrs.emplace_back(
-                        driver.slv->mkDatatypeConstructorDecl(val)
-                      );
-                  }
-
-                  for (const auto& ctor: enum_ctrs){
-                      enum_spec.addConstructor(ctor);
-                  }
-
-                  auto enum_sort = driver.slv->mkDatatypeSort(enum_spec);
-                  $$ = std::make_pair($1,enum_sort);
-                }
-                break;
-                default: break;
+              std::vector<cvc5::DatatypeConstructorDecl> enum_ctrs;
+              for (const auto & val: $4){
+                  enum_ctrs.emplace_back(
+                    driver.slv->mkDatatypeConstructorDecl(val)
+                  );
               }
+
+              for (const auto & ctor: enum_ctrs){
+                  enum_spec.addConstructor(ctor);
+              }
+
+              auto enum_sort = driver.slv->mkDatatypeSort(enum_spec);
+              driver.aux_string_sort_map[$1] = enum_sort;
+            }
+            break;
+            default: break;
+          }
 };
 wom_enums : wom_enums "," WORD {
-              switch (driver.p) {
-                case phase1: {
-                  $$.emplace_back($3);
-                }
-                break;
-                default: break;
-              }
-          };
-          | WORD {
-            switch (driver.p) {
-              case phase1: {
-                std::vector<std::string> t;
-                t.emplace_back($1);
-                $$ = t;
-              } break;
-                default: break;
-            }
-          };
+  switch (driver.p) {
+    case phase1: {
+      $$.emplace_back($3);
+    }
+    break;
+    default: break;
+  }
+};
+| WORD {
+  switch (driver.p) {
+    case phase1: {
+      std::vector<std::string> t;
+      t.emplace_back($1);
+      $$ = t;
+    } break;
+      default: break;
+  }
+};
 
 
 members : "members" "are" wom_decleration "end" "members"

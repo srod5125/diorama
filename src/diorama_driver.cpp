@@ -30,7 +30,9 @@ int calcxx_driver::parse(const std::string &f)
   scan_begin();
 
   yy::calcxx_parser parser(*this);
+  
   parser.set_debug_level(trace_parsing);
+
   int res = parser.parse();
   // 0 if parse succeful
 
