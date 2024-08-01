@@ -58,6 +58,13 @@ public:
 
   
 };
+//access fields of records, for now
+//all of our fields are records, we use this constant
+//to denote univeral access to the cosntructors of our
+//records, access fields
+namespace acc {
+  const std::string fields = "a";
+}
 
 
 #endif 

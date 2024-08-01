@@ -20,17 +20,19 @@
 
   //since the parser is the root dependency
   //any global aliases are better placed here
+
+  using pair_of_strings = std::pair<std::string,std::string>;
+
   using sort_or_string = std::variant<
       std::string,
-      std::pair<std::string,std::string>,
+      pair_of_strings,
       cvc5::Sort
     >;
   using pair_string_sort = std::pair<std::string,sort_or_string>;
 
-  using record_map_var = std::unordered_map<
-    std::string,
-    std::variant<std::string,cvc5::Sort>
-  >;
+  using record_map_var = std::unordered_map<std::string,sort_or_string>;
+
+  using vec_pair_strings = std::vector<pair_of_strings>;
 
 }
 
@@ -147,11 +149,11 @@ TRUE       "true"
 %type <pair_string_sort> enum_decl
 
 %type <std::vector<std::string>> wom_enums
-%type <std::vector<std::pair<std::string,std::string>>> wom_record_row
-%type <std::pair<std::string,std::string>> record_row
+%type <std::vector<pair_string_sort>> wom_decleration
 
-%printer { yyoutput << "todo"; } <std::pair<std::string,std::string>>;
-%printer { yyoutput << "todo"; } <std::vector<std::pair<std::string,std::string>>>;
+%printer { yyoutput << "todo"; } <std::vector<pair_string_sort>>;
+%printer { yyoutput << "todo"; } <pair_of_strings>;
+%printer { yyoutput << "todo"; } <vec_pair_strings>;
 %printer { yyoutput << "todo"; } <std::vector<std::string>>;
 %printer { yyoutput << "todo"; } <pair_string_sort>;
 %printer { yyoutput << $$; } <*>;
@@ -164,6 +166,10 @@ spec : module
 
 module :  "module" WORD "is" data body "end" WORD
 
+
+// todo: eventually test out of order decleration,
+// todo: mix data and body under univeral_block
+
 data : wom_schemes members
 body : inits zom_rules
 
@@ -171,7 +177,7 @@ wom_schemes : wom_schemes scheme | scheme
 scheme : record_decl
        | enum_decl
 
-record_decl : "record" WORD "are" wom_record_row "end" "record" {
+record_decl : "record" WORD "are" wom_decleration "end" "record" {
      switch (driver.p) {
       case phase1: {
 
@@ -182,22 +188,22 @@ record_decl : "record" WORD "are" wom_record_row "end" "record" {
         bool all_sorts_known = true;
 
         for (const auto & row: $4){
-            if ( driver.aux_string_sort_map.contains(row.second) ){
-                record_var[row.first] = std::get<cvc5::Sort>(
-                  driver.aux_string_sort_map[row.second]
-                );
+
+            if ( std::holds_alternative<cvc5::Sort>(row.second) ){
+                record_var[row.first] = std::get<cvc5::Sort>(row.second);
             }
             else {
                 record_var[row.first] = row.second;
                 all_sorts_known = false;
             }
+
         }
         // we declare & construct a record of the sort 
         // that is composed of known sorts
         if ( all_sorts_known ) {
 
             auto rec_decl = driver.slv->mkDatatypeDecl($2);
-            auto fields = driver.slv->mkDatatypeConstructorDecl("fields");
+            auto fields = driver.slv->mkDatatypeConstructorDecl(acc::fields);
 
             for (const auto & [ field, sort ] : record_var) {
                 fields.addSelector(field, std::get<cvc5::Sort>(sort));
@@ -217,42 +223,12 @@ record_decl : "record" WORD "are" wom_record_row "end" "record" {
 
         }
 
-
-
       };
       break;
       default: break;
     }
 };
-wom_record_row : wom_record_row "," record_row {
-   switch (driver.p) {
-      case phase1: {
-        $$.emplace_back($3);
-      };
-      break;
-      default: break;
-    }
-}; | record_row {
-   switch (driver.p) {
-      case phase1: {
-        std::vector<std::pair<std::string,std::string>> t;
-        t.emplace_back($1);
-        $$=t;
-      };
-      break;
-      default: break;
-    }
-};
-
-record_row :  WORD ":" WORD {
-   switch (driver.p) {
-      case phase1: {
-        $$ = std::make_pair($1,$3);
-      };
-      break;
-      default: break;
-    }
-};
+ 
 
 enum_decl : WORD "are" "<" wom_enums ">" {
           switch (driver.p) {
@@ -281,6 +257,7 @@ enum_decl : WORD "are" "<" wom_enums ">" {
 wom_enums : wom_enums "," WORD {
   switch (driver.p) {
     case phase1: {
+      $$ = $1;
       $$.emplace_back($3);
     }
     break;
@@ -315,16 +292,16 @@ named_decl : WORD either_in_or_is WORD {
           
           if ( ! driver.aux_string_sort_map.contains(sort_string) ){
 
-              std::variant<std::string,std::pair<std::string,std::string>,cvc5::Sort> 
-              sort_t{sort_string};
+              $$ = std::make_pair(name,sort_string);
 
-              $$ = std::make_pair(name,sort_t);
           }
           else {
+
               $$ = std::make_pair(
                 name,
                 std::get<cvc5::Sort>(driver.aux_string_sort_map[sort_string])
               );
+
           }
           
         }

@@ -10,7 +10,7 @@ DRIVER_HPP := diorama_driver.hpp
 
 MAIN   := main.cpp
 
-CXX      := clang++-19
+CXX      := clang++
 CXXFLAGS := -Wall -Wextra -std=c++20 -ggdb
 #-ggdb
 
@@ -83,7 +83,7 @@ clean:
 
 parse:
 	bison -o src/parser.cpp diorama_parser.yy && \
-	clang++-19 --std=c++20 -c src/parser.cpp -o objs/parser.o
+	$(CXX) $(CXXFLAGS) -c src/parser.cpp -o objs/parser.o
 
 #TODO: when in release link with static library,
 #TODO: during dev, link with shared 
