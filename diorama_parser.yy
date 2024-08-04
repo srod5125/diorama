@@ -22,15 +22,17 @@
   //any global aliases are better placed here
 
   using pair_of_strings = std::pair<std::string,std::string>;
+  using sort_or_string = std::variant<cvc5::Sort,std::string>;
 
-  using sort_or_string = std::variant<
+  using sort_or_aux = std::variant<
       std::string,
       pair_of_strings,
+      std::vector<sort_or_string>,
       cvc5::Sort
     >;
-  using pair_string_sort = std::pair<std::string,sort_or_string>;
+  using pair_string_sort = std::pair<std::string,sort_or_aux>;
 
-  using record_map_var = std::unordered_map<std::string,sort_or_string>;
+  using record_map_var = std::unordered_map<std::string,sort_or_aux>;
 
   using vec_pair_strings = std::vector<pair_of_strings>;
 
@@ -145,10 +147,9 @@ TRUE       "true"
 %type <pair_string_sort> set_decl 
 %type <pair_string_sort> array_decl 
 %type <pair_string_sort> tuple_decl 
-%type <pair_string_sort> record_decl
 %type <pair_string_sort> enum_decl
 
-%type <std::vector<std::string>> wom_enums
+%type <std::vector<std::string>> wom_enums wom_types
 %type <std::vector<pair_string_sort>> wom_decleration
 
 %printer { yyoutput << "todo"; } <std::vector<pair_string_sort>>;
@@ -170,7 +171,7 @@ module :  "module" WORD "is" data body "end" WORD
 // todo: eventually test out of order decleration,
 // todo: mix data and body under univeral_block
 
-data : wom_schemes members
+data : wom_schemes
 body : inits zom_rules
 
 wom_schemes : wom_schemes scheme | scheme
@@ -213,7 +214,19 @@ record_decl : "record" WORD "are" wom_decleration "end" "record" {
 
             auto rec_sort = driver.slv->mkDatatypeSort(rec_decl);
 
-            driver.aux_string_sort_map[$2] = rec_sort;
+
+            if ( $2 == "members" ){
+
+              driver.members = driver.slv->mkConst(rec_sort,"members");
+              driver.members_declared = true;
+
+            }
+            else {
+
+              driver.aux_string_sort_map[$2] = rec_sort;
+
+            }
+
 
         }
         //else we append to auxiallry map
@@ -276,7 +289,6 @@ wom_enums : wom_enums "," WORD {
 };
 
 
-members : "members" "are" wom_decleration "end" "members"
 wom_decleration : wom_decleration declaration | declaration
 declaration : named_decl "."
             | set_decl "."
@@ -290,17 +302,17 @@ named_decl : WORD either_in_or_is WORD {
           std::string name {$1};
           std::string sort_string {$3};
           
-          if ( ! driver.aux_string_sort_map.contains(sort_string) ){
-
-              $$ = std::make_pair(name,sort_string);
-
-          }
-          else {
+          if ( driver.aux_string_sort_map.contains(sort_string) ){
 
               $$ = std::make_pair(
                 name,
                 std::get<cvc5::Sort>(driver.aux_string_sort_map[sort_string])
               );
+
+          }
+          else {
+
+              $$ = std::make_pair(name,sort_string);
 
           }
           
@@ -363,8 +375,73 @@ array_decl  : WORD "maps" WORD "to" WORD {
       default: break;
     }
 };
-tuple_decl  : WORD either_in_or_is "(" wom_elements ")"
-wom_elements  : WORD | wom_elements "," WORD
+tuple_decl  : WORD either_in_or_is "(" wom_types ")" {
+  switch (driver.p) {
+    case phase1: {
+      
+      bool all_sorts_known = true;
+      std::vector<sort_or_string> sorts_for_tuple;
+
+      for ( const auto & sort : $4 ) {
+          if ( driver.aux_string_sort_map.contains(sort) ) {
+              sorts_for_tuple.emplace_back( 
+                  std::get<cvc5::Sort>(driver.aux_string_sort_map[sort])
+               );
+          }
+          else {
+              sorts_for_tuple.emplace_back(sort);
+              all_sorts_known = false;
+          }
+      }
+
+      if ( all_sorts_known ) {
+
+          std::vector<cvc5::Sort> tmp_sort;
+          for ( const auto & sort : sorts_for_tuple ) {
+              tmp_sort.emplace_back(std::get<cvc5::Sort>(sort));
+          }
+
+          auto tuple_sort = driver.slv->mkTupleSort( tmp_sort ) ;
+          $$ = std::make_pair($1,tuple_sort);
+
+      }
+      else {
+        
+          $$ = std::make_pair($1,sorts_for_tuple);
+
+      }
+
+    }
+    break;
+    default: break;
+  }
+};
+wom_types  : wom_types "," WORD {
+  switch (driver.p) {
+    case phase1: {
+      $$ = $1;
+      $$.emplace_back($3);
+    }
+    break;
+    default: break;
+  }
+};
+| WORD {
+  switch (driver.p) {
+    case phase1: {
+      std::vector<std::string> t;
+      t.emplace_back($1);
+      $$ = t;
+    } break;
+      default: break;
+  }
+};
+
+
+
+
+
+//TODO: wom_elements -> wom_terms
 
 either_in_or_is : "in" | "is"
 

@@ -37,6 +37,8 @@ public:
   // constrain solver fields
   std::unique_ptr<cvc5::Solver> slv;
   cvc5::Term members; 
+
+  bool members_declared;
   
 
   calcxx_driver();
@@ -53,7 +55,7 @@ public:
 
 
   //auxillary & helper member
-  std::unordered_map<std::string,sort_or_string> aux_string_sort_map;
+  std::unordered_map<std::string,sort_or_aux> aux_string_sort_map;
   std::unordered_map<std::string,record_map_var> aux_string_rec_map;
 
   

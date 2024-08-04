@@ -6,15 +6,15 @@
 calcxx_driver::calcxx_driver()
   : trace_scanning{false},
     trace_parsing{false},
-    p{phase1}
+    p{phase1},
+    members_declared{false}
 {
+  //logic options
   this->slv = std::make_unique<cvc5::Solver>();
   this->slv->setLogic("ALL");
   this->slv->setOption("produce-models", "true");
 
-
-
-
+  //adding known sorts
   this->aux_string_sort_map["int"]  = this->slv->getIntegerSort();
   this->aux_string_sort_map["bool"] = this->slv->getBooleanSort();
 
