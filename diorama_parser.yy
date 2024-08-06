@@ -15,6 +15,8 @@
   #include <variant>
   #include <vector>
   #include <unordered_map>
+  #include <queue>
+  #include <tuple>
   #include <cvc5/cvc5.h>
 	
 
@@ -26,13 +28,17 @@
 
   using sort_or_aux = std::variant<
       std::string,
+      std::tuple<std::string>,
       pair_of_strings,
       std::vector<sort_or_string>,
       cvc5::Sort
     >;
   using pair_string_sort = std::pair<std::string,sort_or_aux>;
 
-  using record_map_var = std::unordered_map<std::string,sort_or_aux>;
+  using record_map_aux = std::unordered_map<std::string,sort_or_aux>;
+  using record_map     = std::unordered_map<std::string,cvc5::Sort>;
+
+  using pair_string_rec = std::pair<std::string,record_map_aux>;
 
   using vec_pair_strings = std::vector<pair_of_strings>;
 
@@ -165,7 +171,136 @@ TRUE       "true"
 
 spec : module
 
-module :  "module" WORD "is" data body "end" WORD
+module :  "module" WORD "is" data body "end" WORD {
+  switch (driver.p) {
+    case phase1: {
+      
+      if ( ! driver.members_declared ) { /*TODO: throw */ }
+
+      //TODO: eventually factor these out into functions
+      while( ! driver.aux_string_rec_map.empty() ) {
+
+        //first  = string name
+        //second = aux record
+        pair_string_rec record_tmp = driver.aux_string_rec_map.front();
+        driver.aux_string_rec_map.pop();
+        bool all_sorts_known = true;
+
+        for ( auto& [field,sort] : record_tmp.second ) {
+
+          if ( std::holds_alternative<std::string>(sort) ) {
+
+            auto tmp { std::get<std::string>(sort) };
+
+            if ( driver.string_sort_map.contains( tmp ) ){
+              sort = driver.string_sort_map[tmp];
+            }
+            else {
+              all_sorts_known = false;
+            }
+
+          }
+          else if ( std::holds_alternative<std::tuple<std::string>>(sort) ) {
+
+            std::string set_string { std::get<0>(std::get<std::tuple<std::string>>(sort)) };
+
+            if ( driver.string_sort_map.contains( set_string ) ){
+              sort = driver.string_sort_map[set_string];
+            }
+            else {
+              all_sorts_known = false;
+            } 
+
+
+          }
+          else if ( std::holds_alternative<pair_of_strings>(sort) ) {
+
+            auto tmp_dom{ std::get<pair_of_strings>(sort).first };
+            auto tmp_rng{ std::get<pair_of_strings>(sort).second };
+
+            if ( driver.string_sort_map.contains( tmp_dom ) &&
+                 driver.string_sort_map.contains( tmp_rng )   ) {
+
+                 
+                auto array_sort = driver.slv->mkArraySort(
+                  driver.string_sort_map[tmp_dom],
+                  driver.string_sort_map[tmp_rng]
+                ); 
+
+                sort = array_sort;
+
+            }
+            else {
+              all_sorts_known = false;
+            }
+
+
+          }
+          else if ( std::holds_alternative<std::vector<sort_or_string>>(sort) ) {
+
+            auto tmp_sorts { std::get<std::vector<sort_or_string>>(sort) };
+            std::vector<sort_or_string> sorts_for_tuple;
+
+            for ( auto & sort_t : tmp_sorts ) {
+                auto sort_string { std::get<std::string>(sort_t) };
+                if ( driver.string_sort_map.contains(sort_string) ) {
+                    sorts_for_tuple.emplace_back( 
+                        driver.string_sort_map[sort_string]
+                    );
+                }
+                else {
+                    sorts_for_tuple.emplace_back(sort_t);
+                    all_sorts_known = false;
+                }
+            }
+
+            if ( all_sorts_known ) {
+
+              std::vector<cvc5::Sort> tmp_sorts_for_tuple;
+              for ( const auto & sort : sorts_for_tuple ) {
+                  tmp_sorts_for_tuple.emplace_back(std::get<cvc5::Sort>(sort));
+              }
+
+              auto tuple_sort = driver.slv->mkTupleSort( tmp_sorts_for_tuple ) ;
+              sort = tuple_sort;
+
+            }
+
+          }
+
+
+        }
+
+        if ( all_sorts_known ) {
+
+          auto rec_decl = driver.slv->mkDatatypeDecl(record_tmp.first);
+          auto fields = driver.slv->mkDatatypeConstructorDecl(acc::fields);
+
+          for (const auto & [ field, sort ] : record_tmp.second) {
+              fields.addSelector(field, std::get<cvc5::Sort>(sort));
+          }
+
+          rec_decl.addConstructor(fields);
+
+          auto rec_sort = driver.slv->mkDatatypeSort(rec_decl);    
+
+          driver.string_sort_map[record_tmp.first] = rec_sort;
+
+        }
+        else {
+
+          driver.aux_string_rec_map.push(record_tmp);
+
+        }
+
+      }
+
+
+    }
+    break;
+    default: break;
+  }
+}
 
 
 // todo: eventually test out of order decleration,
@@ -185,7 +320,7 @@ record_decl : "record" WORD "are" wom_decleration "end" "record" {
         //TODO: cover already declared case
         //for now we assume it hasnt already been declared
 
-        record_map_var record_var;
+        record_map_aux record_var;
         bool all_sorts_known = true;
 
         for (const auto & row: $4){
@@ -223,16 +358,18 @@ record_decl : "record" WORD "are" wom_decleration "end" "record" {
             }
             else {
 
-              driver.aux_string_sort_map[$2] = rec_sort;
+              driver.string_sort_map[$2] = rec_sort;
 
             }
 
 
         }
-        //else we append to auxiallry map
+        //else we append to auxiallry structure
         else {
 
-          driver.aux_string_rec_map[$2] = record_var;
+          driver.aux_string_rec_map.emplace( 
+            std::make_pair($2,record_var)
+          );
 
         }
 
@@ -261,7 +398,7 @@ enum_decl : WORD "are" "<" wom_enums ">" {
               }
 
               auto enum_sort = driver.slv->mkDatatypeSort(enum_spec);
-              driver.aux_string_sort_map[$1] = enum_sort;
+              driver.string_sort_map[$1] = enum_sort;
             }
             break;
             default: break;
@@ -302,11 +439,11 @@ named_decl : WORD either_in_or_is WORD {
           std::string name {$1};
           std::string sort_string {$3};
           
-          if ( driver.aux_string_sort_map.contains(sort_string) ){
+          if ( driver.string_sort_map.contains(sort_string) ){
 
               $$ = std::make_pair(
                 name,
-                std::get<cvc5::Sort>(driver.aux_string_sort_map[sort_string])
+                driver.string_sort_map[sort_string]
               );
 
           }
@@ -330,12 +467,15 @@ set_decl : WORD "is-set-of" WORD {
           std::string name {$1};
           std::string sort_string {$3};
           
-          if ( ! driver.aux_string_sort_map.contains(sort_string) ){
-              $$ = std::make_pair(name,sort_string);
+          if ( ! driver.string_sort_map.contains(sort_string) ){
+              //work around because name_decl & set_decl are
+              //structurally equivalant
+              std::tuple<std::string> set_string = std::make_tuple(sort_string);
+              $$ = std::make_pair(name,set_string);
           }
           else {
               auto set_sort = driver.slv->mkSetSort(
-                std::get<cvc5::Sort>(driver.aux_string_sort_map[sort_string])
+                driver.string_sort_map[sort_string]
               );
               $$ = std::make_pair(name,set_sort);
           }
@@ -355,8 +495,8 @@ array_decl  : WORD "maps" WORD "to" WORD {
           std::string dom_string {$3};
           std::string rng_string {$3};
 
-          if ( ! driver.aux_string_sort_map.contains(dom_string) &&
-               ! driver.aux_string_sort_map.contains(rng_string) ){
+          if ( ! driver.string_sort_map.contains(dom_string) &&
+               ! driver.string_sort_map.contains(rng_string)    ){
 
                 auto array_string = std::make_pair(dom_string,rng_string);
                 $$ = std::make_pair(name,array_string);
@@ -364,8 +504,8 @@ array_decl  : WORD "maps" WORD "to" WORD {
           else {
 
             auto array_sort = driver.slv->mkArraySort(
-              std::get<cvc5::Sort>(driver.aux_string_sort_map[dom_string]),
-              std::get<cvc5::Sort>(driver.aux_string_sort_map[rng_string])
+              driver.string_sort_map[dom_string],
+              driver.string_sort_map[rng_string]
             );
 
             $$ = std::make_pair(name,array_sort);
@@ -383,9 +523,9 @@ tuple_decl  : WORD either_in_or_is "(" wom_types ")" {
       std::vector<sort_or_string> sorts_for_tuple;
 
       for ( const auto & sort : $4 ) {
-          if ( driver.aux_string_sort_map.contains(sort) ) {
+          if ( driver.string_sort_map.contains(sort) ) {
               sorts_for_tuple.emplace_back( 
-                  std::get<cvc5::Sort>(driver.aux_string_sort_map[sort])
+                  driver.string_sort_map[sort]
                );
           }
           else {
@@ -407,7 +547,7 @@ tuple_decl  : WORD either_in_or_is "(" wom_types ")" {
       }
       else {
         
-          $$ = std::make_pair($1,sorts_for_tuple);
+        $$ = std::make_pair($1,sorts_for_tuple);
 
       }
 

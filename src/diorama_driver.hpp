@@ -54,9 +54,13 @@ public:
 
 
 
+  // known sort into
+  std::unordered_map<std::string,cvc5::Sort>    string_sort_map;
+  std::unordered_map<std::string,record_map>    string_rec_map;
+
+
   //auxillary & helper member
-  std::unordered_map<std::string,sort_or_aux> aux_string_sort_map;
-  std::unordered_map<std::string,record_map_var> aux_string_rec_map;
+  std::queue<pair_string_rec> aux_string_rec_map;
 
   
 };
