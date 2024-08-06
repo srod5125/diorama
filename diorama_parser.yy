@@ -288,7 +288,9 @@ module :  "module" WORD "is" data body "end" WORD {
 
         }
         else {
-
+          //potenial infinite loop here:
+          //exit condition is if reencounted same record after
+          //processing whole queue
           driver.aux_string_rec_map.push(record_tmp);
 
         }
