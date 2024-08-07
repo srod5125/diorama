@@ -15,8 +15,8 @@ calcxx_driver::calcxx_driver()
   this->slv->setOption("produce-models", "true");
 
   //adding known sorts
-  this->aux_string_sort_map["int"]  = this->slv->getIntegerSort();
-  this->aux_string_sort_map["bool"] = this->slv->getBooleanSort();
+  this->string_sort_map["int"]  = this->slv->getIntegerSort();
+  this->string_sort_map["bool"] = this->slv->getBooleanSort();
 
 }
 

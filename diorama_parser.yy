@@ -16,7 +16,6 @@
   #include <vector>
   #include <unordered_map>
   #include <queue>
-  #include <tuple>
   #include <cvc5/cvc5.h>
 	
 
@@ -26,9 +25,25 @@
   using pair_of_strings = std::pair<std::string,std::string>;
   using sort_or_string = std::variant<cvc5::Sort,std::string>;
 
+
+  struct SortString {
+      std::string value;
+      SortString(const std::string& s) : value{s} {}
+      SortString() = default;
+  };
+
+  struct SetString {
+      int x;
+      std::string value;
+      SetString(const std::string& s) : x(1),value{s} {}
+      SetString() = default;
+  };
+
+
+
   using sort_or_aux = std::variant<
-      std::string,
-      std::tuple<std::string>,
+      SortString,
+      SetString,
       pair_of_strings,
       std::vector<sort_or_string>,
       cvc5::Sort
@@ -188,24 +203,24 @@ module :  "module" WORD "is" data body "end" WORD {
 
         for ( auto& [field,sort] : record_tmp.second ) {
 
-          if ( std::holds_alternative<std::string>(sort) ) {
+          if ( std::holds_alternative<SortString>(sort) ) {
 
-            auto tmp { std::get<std::string>(sort) };
+            auto tmp_sort_string { std::get<SortString>(sort) };
 
-            if ( driver.string_sort_map.contains( tmp ) ){
-              sort = driver.string_sort_map[tmp];
+            if ( driver.string_sort_map.contains( tmp_sort_string.value ) ){
+              sort = driver.string_sort_map[tmp_sort_string.value];
             }
             else {
               all_sorts_known = false;
             }
 
           }
-          else if ( std::holds_alternative<std::tuple<std::string>>(sort) ) {
+          else if ( std::holds_alternative<SetString>(sort) ) {
 
-            std::string set_string { std::get<0>(std::get<std::tuple<std::string>>(sort)) };
+            auto set_string { std::get<SetString>(sort) };
 
-            if ( driver.string_sort_map.contains( set_string ) ){
-              sort = driver.string_sort_map[set_string];
+            if ( driver.string_sort_map.contains( set_string.value ) ){
+              sort = driver.string_sort_map[set_string.value];
             }
             else {
               all_sorts_known = false;
@@ -439,13 +454,13 @@ named_decl : WORD either_in_or_is WORD {
     {
         case phase1: {
           std::string name {$1};
-          std::string sort_string {$3};
-          
-          if ( driver.string_sort_map.contains(sort_string) ){
+          SortString sort_string($3);
+
+          if ( driver.string_sort_map.contains(sort_string.value) ){
 
               $$ = std::make_pair(
                 name,
-                driver.string_sort_map[sort_string]
+                driver.string_sort_map[sort_string.value]
               );
 
           }
@@ -467,17 +482,16 @@ set_decl : WORD "is-set-of" WORD {
     {
         case phase1: {
           std::string name {$1};
-          std::string sort_string {$3};
-          
-          if ( ! driver.string_sort_map.contains(sort_string) ){
-              //work around because name_decl & set_decl are
-              //structurally equivalant
-              std::tuple<std::string> set_string = std::make_tuple(sort_string);
+          SetString set_string($3);
+
+          if ( ! driver.string_sort_map.contains(set_string.value) ){
+
               $$ = std::make_pair(name,set_string);
+
           }
           else {
               auto set_sort = driver.slv->mkSetSort(
-                driver.string_sort_map[sort_string]
+                driver.string_sort_map[set_string.value]
               );
               $$ = std::make_pair(name,set_sort);
           }
