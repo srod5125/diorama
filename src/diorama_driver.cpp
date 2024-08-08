@@ -51,6 +51,8 @@ void calcxx_driver::error(const std::string &m)
   std::cerr << "Error: " <<  m << std::endl;
 }
 
+//TODO: phase 0 is syntax checking phase, if fail
+//TODO: do not advance phase
 
  void calcxx_driver::next_phase(){
 

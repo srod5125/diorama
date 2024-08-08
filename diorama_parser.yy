@@ -33,9 +33,8 @@
   };
 
   struct SetString {
-      int x;
       std::string value;
-      SetString(const std::string& s) : x(1),value{s} {}
+      SetString(const std::string& s) : value{s} {}
       SetString() = default;
   };
 
@@ -56,6 +55,7 @@
   using pair_string_rec = std::pair<std::string,record_map_aux>;
 
   using vec_pair_strings = std::vector<pair_of_strings>;
+
 
 }
 
@@ -192,14 +192,23 @@ module :  "module" WORD "is" data body "end" WORD {
       
       if ( ! driver.members_declared ) { /*TODO: throw */ }
 
+      int aux_processing_iterrations = driver.aux_string_rec_map.size();
+      aux_processing_iterrations = aux_processing_iterrations * aux_processing_iterrations + 1;
+
       //TODO: eventually factor these out into functions
-      while( ! driver.aux_string_rec_map.empty() ) {
+
+      for ( int i=0; i < aux_processing_iterrations+1; i+= 1) {
+
+        if ( driver.aux_string_rec_map.empty() ) { 
+            break;
+        }
 
         //first  = string name
         //second = aux record
         pair_string_rec record_tmp = driver.aux_string_rec_map.front();
         driver.aux_string_rec_map.pop();
         bool all_sorts_known = true;
+
 
         for ( auto& [field,sort] : record_tmp.second ) {
 
@@ -303,9 +312,7 @@ module :  "module" WORD "is" data body "end" WORD {
 
         }
         else {
-          //potenial infinite loop here:
-          //exit condition is if reencounted same record after
-          //processing whole queue
+          
           driver.aux_string_rec_map.push(record_tmp);
 
         }
@@ -416,6 +423,7 @@ enum_decl : WORD "are" "<" wom_enums ">" {
 
               auto enum_sort = driver.slv->mkDatatypeSort(enum_spec);
               driver.string_sort_map[$1] = enum_sort;
+
             }
             break;
             default: break;
