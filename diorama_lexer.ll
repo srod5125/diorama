@@ -7,6 +7,8 @@
   #include <iostream>
   #include "parser.hpp"
   #include "diorama_driver.hpp"
+
+  #include <cvc5/cvc5.h>
   
   #undef yywrap
   #define yywrap() 1
@@ -115,8 +117,14 @@ blank   [ \t]
 "->"              return yy::calcxx_parser::make_ARROW(loc);
 "{"               return yy::calcxx_parser::make_LBRACE(loc);
 "}"               return yy::calcxx_parser::make_RBRACE(loc);
-"false"           return yy::calcxx_parser::make_FALSE(loc);
-"true"            return yy::calcxx_parser::make_TRUE(loc);
+"false"           {
+                    auto f = driver.slv->mkFalse();
+                    return yy::calcxx_parser::make_FALSE(f,loc);
+                  }
+"true"            {
+                    auto t = driver.slv->mkTrue();
+                    return yy::calcxx_parser::make_TRUE(t,loc);
+                  }
 
 
 {int} {
@@ -131,8 +139,9 @@ blank   [ \t]
 }
 
 {float} {
-  float f = std::stof(yytext);
-  return yy::calcxx_parser::make_FLOAT(f,loc);
+  //float f = std::stof(yytext);
+  //return yy::calcxx_parser::make_FLOAT(f,loc);
+  yy::calcxx_parser::make_FLOAT(loc);
 }
   
 {word}  { 

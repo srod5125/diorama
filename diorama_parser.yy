@@ -85,16 +85,16 @@
 
 %define api.token.prefix {TOK_} 
 %token
-EOF 0       "end of file"
-H1          "#"
-H2          "##"
-H3          "###"
-H4          "####"
-H5          "#####"
-BLD         "**"
-MEMBERS     "members" 
-ARE         "are"
-END         "end"
+EOF 0      "end of file"
+H1         "#"
+H2         "##"
+H3         "###"
+H4         "####"
+H5         "#####"
+BLD        "**"
+MEMBERS    "members" 
+ARE        "are"
+END        "end"
 ASSIGN     ":="
 MINUS      "-"
 PLUS       "+"
@@ -153,26 +153,35 @@ LBRCKT     "["
 ARROW      "->"
 LBRACE     "{"
 RBRACE     "}"
-FALSE      "false"
-TRUE       "true"
 ;
 
 
 
 %token <std::string> WORD
-%token <int> INT 
-%token <float> FLOAT
+%token <int> INT
+%token <cvc5::Term> FALSE 
+%token <cvc5::Term> TRUE
+%token FLOAT 
+
+%type <cvc5::Term> name_sel 
+%type <cvc5::Term> tuple_val 
+%type <cvc5::Term> enum_val
+%type <cvc5::Term> atom
 
 
+%type <pair_string_sort> declaration 
 %type <pair_string_sort> named_decl 
 %type <pair_string_sort> set_decl 
 %type <pair_string_sort> array_decl 
 %type <pair_string_sort> tuple_decl 
 %type <pair_string_sort> enum_decl
 
-%type <std::vector<std::string>> wom_enums wom_types
+%type <std::vector<std::string>> wom_enums wom_types wom_sel
 %type <std::vector<pair_string_sort>> wom_decleration
 
+%type <std::string> word_or_members 
+
+%printer { yyoutput << "todo"; } <cvc5::Term>;
 %printer { yyoutput << "todo"; } <std::vector<pair_string_sort>>;
 %printer { yyoutput << "todo"; } <pair_of_strings>;
 %printer { yyoutput << "todo"; } <vec_pair_strings>;
@@ -337,7 +346,9 @@ wom_schemes : wom_schemes scheme | scheme
 scheme : record_decl
        | enum_decl
 
-record_decl : "record" WORD "are" wom_decleration "end" "record" {
+word_or_members : WORD | "members" { $$ = std::string("members"); }
+
+record_decl : "record" word_or_members "are" wom_decleration "end" "record" {
      switch (driver.p) {
       case phase1: {
 
@@ -451,7 +462,28 @@ wom_enums : wom_enums "," WORD {
 };
 
 
-wom_decleration : wom_decleration declaration | declaration
+wom_decleration : wom_decleration declaration {
+
+  switch (driver.p) {
+    case phase1: {
+      $$ = $1;
+      $$.emplace_back($2);
+    }
+    break;
+    default: break;
+  }
+
+};  | declaration {
+    switch (driver.p) {
+      case phase1: {
+        std::vector<pair_string_sort> t;
+        t.emplace_back($1);
+        $$ = t;
+      } break;
+        default: break;
+    }
+};
+
 declaration : named_decl "."
             | set_decl "."
             | array_decl "."
@@ -618,13 +650,14 @@ struct_init : "start" "for" WORD "is" basic_init "end" "start"
 member_init : "start" "for" "members" "is" basic_init "end" "start"
 
 array_map_init : wom_structure_mapping
-wom_structure_mapping 
-  : wom_structure_mapping "," structure ":=" structure 
-  | structure ":=" structure
-wom_word_to_structure_mapping 
-  : wom_word_to_structure_mapping "," WORD ":=" structure 
-  | WORD ":=" structure
 basic_init : wom_word_to_structure_mapping
+
+wom_structure_mapping  : wom_structure_mapping "," structure_mapping | structure_mapping
+structure_mapping : structure ":=" structure
+
+wom_word_to_structure_mapping : wom_word_to_structure_mapping "," word_to_structure | word_to_structure
+word_to_structure :  WORD ":=" structure 
+
 
 zom_rules : %empty | zom_rules rule
 optional_word : %empty | WORD
@@ -705,11 +738,115 @@ arithmatic  : term
             | arithmatic "/" term
 
 
-name_sel  : WORD               
-          | WORD wom_sel
-lhs_member  : WORD               
-            | WORD wom_sel
-wom_sel : wom_sel "->" WORD | "->" WORD
+name_sel  : WORD {
+
+  switch (driver.p) {
+    case phase2: { 
+      std::string member_name{ $1 };
+
+      auto mem_sel = driver.members 
+                           .getSort()
+                           .getDatatype()[acc::fields]
+                           .getSelector(member_name)
+                           .getTerm(); 
+
+      std::cout << mem_sel << std::endl;
+      std::cout << driver.members.getNumChildren() << std::endl;
+      
+      auto field_term = driver.slv->mkTerm(
+          cvc5::Kind::APPLY_SELECTOR,
+          { mem_sel , driver.members }
+      );
+
+      $$ = field_term;
+    }break;
+
+    default: break;
+  };
+
+};
+  | WORD wom_sel {
+
+    switch (driver.p) {
+      case phase2: {
+        
+       std::string member_name = std::string($1);
+       std::vector<std::string> selectors_vec { $2 };
+       auto mem_sel = driver.members 
+                            .getSort()
+                            .getDatatype()
+                            .getSelector(member_name)
+                            .getTerm();
+        
+        auto field_term = driver.slv->mkTerm(
+            cvc5::Kind::APPLY_SELECTOR,
+            { mem_sel, driver.members }
+        );
+
+        auto curr_sel    { mem_sel };    //cvc5 selector
+        auto temp_term   { field_term }; //cvc5 term
+        for ( std::size_t i = 1; i < selectors_vec.size() ; i+= 1 ) {
+
+          std::string next_sel_name = selectors_vec[i] ;
+
+          curr_sel = curr_sel 
+                     .getSort() 
+                     .getDatatype()
+                     .getSelector(next_sel_name) 
+                     .getTerm();
+
+          temp_term = driver.slv->mkTerm(
+              cvc5::Kind::APPLY_SELECTOR,
+              { curr_sel, temp_term }
+          );
+        }
+
+        // vec is never empty via grammar rules
+        std::string field_to_sel { selectors_vec.back() }; 
+
+        curr_sel = temp_term 
+                     .getSort() 
+                     .getDatatype()
+                     .getSelector(field_to_sel) 
+                     .getTerm();
+
+        field_term = driver.slv->mkTerm(
+            cvc5::Kind::APPLY_SELECTOR,
+            { curr_sel, temp_term }
+        );
+        
+        $$ = field_term;
+
+      };
+      break;
+      default: break;
+    };
+
+
+};
+
+lhs_member  : WORD | WORD wom_sel
+
+wom_sel : wom_sel "->" WORD {
+  switch (driver.p) {
+    case phase2: {
+      $$ = $1;
+      $$.emplace_back($3);
+    };
+    break;
+    default: break;
+  };
+};      | "->" WORD {
+  switch (driver.p) {
+    case phase2: {
+      std::vector<std::string> t;
+      t.emplace_back($2);
+      $$ = t;
+    };
+    break;
+    default: break;
+  };
+}
 
 term  : atom
       | "(" expr ")"
@@ -717,7 +854,25 @@ term  : atom
 structure : atom | "{" wom_structure_row "}"
 wom_structure_row : wom_structure_row "," structure_row | structure_row
 structure_row : WORD ":" structure
-atom : INT | FLOAT | name_sel | tuple_val | FALSE | TRUE | enum_val
+atom : INT {
+  switch (driver.p) {
+    case phase2: {
+      $$ = driver.slv->mkInteger($1);
+    };
+    break;
+    default: break;
+  };
+}; | FLOAT {
+  //TODO: float -> bitvector nonsense
+};
+   | name_sel {
+
+};
+   | tuple_val {}
+   | FALSE 
+   | TRUE 
+   | enum_val {}
+
 enum_val : name_sel "<" WORD ">"
 tuple_val : "(" wom_atom  ")"
 wom_atom : wom_atom "," atom | atom

@@ -71,11 +71,12 @@ $(OBJ_DIR)/main.o : $(SRC_DIR)/main.cpp
 debug: $(sources) $(objects)
 	$(CXX) $(CXXFLAGS) \
 		  $(objects) \
-		-I$(DEP_DIR)cvc5/ \
-		-L$(DEP_DIR) -lcvc5 -lcvc5parser \
+		-I/home/stephen/cvc5/build/include \
+		-L/home/stephen/cvc5/build/src \
+		-l:libcvc5.so.1 \
+		-Wl,-rpath,/home/stephen/cvc5/build/src \
 		-o tb
-
-
+		
 clean:
 	find $(OBJ_DIR) -type f -delete && \
 	rm src/lexer.cpp src/parser.cpp src/parser.hpp
@@ -84,6 +85,12 @@ clean:
 parse:
 	bison -o src/parser.cpp diorama_parser.yy && \
 	$(CXX) $(CXXFLAGS) -c src/parser.cpp -o objs/parser.o
+
+temp:
+	clang++ temp/temp.cpp  \
+		-I./deps/cvc5 -L./deps/ \
+		-lcvc5 -lcvc5parser \
+		-o temp/a 
 
 #TODO: when in release link with static library,
 #TODO: during dev, link with shared 
@@ -95,7 +102,7 @@ parse:
 
 
 #bison -o src/parser.cpp diorama_parser.yy
-#clang++-19 --std=c++20 -c src/parser.cpp -o objs/parser.o
-#clang++-19 --std=c++20 -c src/diorama_driver.cpp -o objs/diorama_driver.o
-#clang++-19 --std=c++20 -c src/lexer.cpp -o objs/lexer.o 
-#clang++-19 --std=c++20 -c src/main.cpp -o objs/main.o 
+#clang++ --std=c++20 -c src/parser.cpp -o objs/parser.o
+#clang++ --std=c++20 -c src/diorama_driver.cpp -o objs/diorama_driver.o
+#clang++ --std=c++20 -c src/lexer.cpp -o objs/lexer.o 
+#clang++ --std=c++20 -c src/main.cpp -o objs/main.o 

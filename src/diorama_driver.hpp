@@ -18,6 +18,7 @@ YY_DECL;
 
 enum PHASE {
   phase1,
+  phase2,
   end
 };
 

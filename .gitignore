@@ -19,6 +19,13 @@ deps/libcvc5parser.a
 deps/libcvc5parser.so
 
 
+deps/*
+
+
+extra/*
+extra
+
+
 todo.txt
 
 test_input.txt
