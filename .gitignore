@@ -41,3 +41,6 @@ notes/*
 
 src/parser.output
 parser.output
+
+
+.vscode/settings.json

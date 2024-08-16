@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <memory>
 #include <variant>
+#include <vector>
 
 #include "parser.hpp"
 #include <cvc5/cvc5.h>
@@ -54,11 +55,13 @@ public:
   void next_phase();
 
 
-
   // known sort into
   std::unordered_map<std::string,cvc5::Sort>  string_sort_map;
-  std::unordered_map<std::string,record_map>  string_rec_map;
 
+  std::unordered_map<std::string,cvc5::Term> module_fns;
+
+  //TODO: struct map
+  //std::unordered_map<std::vector<std::string>,std::string> record_members_map;
 
   //auxillary & helper member
   std::queue<pair_string_rec> aux_string_rec_map;
@@ -71,7 +74,28 @@ public:
 //records, access fields
 namespace acc {
   const std::string fields = "a";
-}
+};
+
+
+//helper struct
+/*
+struct VecStrHash {
+    std::size_t operator()(const std::vector<std::string>& v) const {
+        
+        std::size_t hash1;
+
+        for (const auto& s: v) {
+          hash1 ^= std::hash<std::string>{}(s) << 1;
+        }
+
+        return hash1;
+
+    }
+    bool VecStrHash::operator==(const std::vector<std::string>& b) {
+        return false;
+    }
+};
+*/
 
 
 #endif 
