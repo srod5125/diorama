@@ -58,6 +58,11 @@
   using vec_pair_strings = std::vector<pair_of_strings>;
 
 
+
+  enum class quant { any, all, at_least, at_most, always };
+
+  using cond_op_and_limit = std::pair<quant,int>;
+
 }
 
 
@@ -184,7 +189,9 @@ RBRACE     "}"
 %type <std::vector<pair_string_sort>> wom_decleration
 %type <std::vector<pair_string_term>> wom_word_to_structure_mapping basic_init
 
-%type <std::string> word_or_members 
+%type <cond_op_and_limit> quantifier
+
+%type <std::string> word_or_members
 
 %printer { yyoutput << "todo"; } <cvc5::Term>;
 %printer { yyoutput << "todo"; } <std::vector<pair_string_sort>>;
@@ -193,6 +200,7 @@ RBRACE     "}"
 %printer { yyoutput << "todo"; } <vec_pair_strings>;
 %printer { yyoutput << "todo"; } <std::vector<std::string>>;
 %printer { yyoutput << "todo"; } <pair_string_term>;
+%printer { yyoutput << "todo"; } <cond_op_and_limit>;
 %printer { yyoutput << "todo"; } <pair_string_sort>;
 %printer { yyoutput << $$; } <*>;
 
@@ -804,11 +812,9 @@ word_to_structure :  WORD ":=" structure {
 
 
 zom_rules : %empty | zom_rules rule
-optional_word : %empty | WORD
-rule : "rule" optional_word "is" when_blocks then_blocks "end" "rule"
-when_blocks : wom_when_blocks
+zow_word : %empty | WORD
+rule : "rule" zow_word "is" wom_when_blocks wom_then_blocks "end" "rule"
 wom_when_blocks : wom_when_blocks "or" when_block | when_block
-then_blocks : wom_then_blocks
 wom_then_blocks : wom_then_blocks "or" then_block | then_block
 when_block : "when" zow_quantifier ":" zom_determining_exprs
 zow_quantifier : %empty | quantifier
@@ -818,11 +824,52 @@ wom_stmts : wom_stmts stmt | stmt
 
 determining_exprs : "-" expr "."
 
-quantifier : "any"        
-           | "all"        
-           | "at" "most"  
-           | "at" "least" 
-           | "always"     
+quantifier 
+  : "any" {
+    switch (driver.p) {
+      case phase3: {
+        $$ = std::make_pair(quant::any,0);
+      };
+      break;
+      default: break;
+    };
+};
+  | "all" {
+    switch (driver.p) {
+      case phase3: {
+        $$ = std::make_pair(quant::all,0);
+      };
+      break;
+      default: break;
+    };
+};
+  | "at" "most" INT {
+    switch (driver.p) {
+      case phase3: {
+        $$ = std::make_pair(quant::at_most,$3);
+      };
+      break;
+      default: break;
+    };
+};
+  | "at" "least" INT {
+    switch (driver.p) {
+      case phase3: {
+        $$ = std::make_pair(quant::at_least,$3);
+      };
+      break;
+      default: break;
+    };
+};
+  | "always" {
+    switch (driver.p) {
+      case phase3: {
+        $$ = std::make_pair(quant::always,0);
+      };
+      break;
+      default: break;
+    };
+};
 //TODO: add or equal to to at most or at least
      
 stmt : if_stmt
