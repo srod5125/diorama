@@ -214,8 +214,7 @@ RBRACE     "}"
 spec : module
 
 module :  "module" WORD "is" data body "end" WORD {
-  switch (driver.p) {
-    case phase1: {
+    if (driver.p == phase1) {
       
       if ( ! driver.members_declared ) { /*TODO: throw */ }
 
@@ -374,10 +373,7 @@ module :  "module" WORD "is" data body "end" WORD {
 
 
     }
-    break;
-    default: break;
-  }
-}
+};
 
 
 // todo: eventually test out of order decleration,
@@ -393,8 +389,7 @@ scheme : record_decl
 word_or_members : WORD | "members" { $$ = std::string("members"); }
 
 record_decl : "record" word_or_members "are" wom_decleration "end" "record" {
-     switch (driver.p) {
-      case phase1: {
+      if (driver.p == phase1) {
 
         //TODO: cover already declared case
         //for now we assume it hasnt already been declared
@@ -452,80 +447,57 @@ record_decl : "record" word_or_members "are" wom_decleration "end" "record" {
 
         }
 
-      };
-      break;
-      default: break;
-    }
+      }
 };
  
 
 enum_decl : WORD "are" "<" wom_enums ">" {
-          switch (driver.p) {
-            case phase1: {
+  if (driver.p == phase1) {
 
-              auto enum_spec = driver.slv->mkDatatypeDecl($1);
+    auto enum_spec = driver.slv->mkDatatypeDecl($1);
 
-              std::vector<cvc5::DatatypeConstructorDecl> enum_ctrs;
-              for (const auto & val: $4){
-                  enum_ctrs.emplace_back(
-                    driver.slv->mkDatatypeConstructorDecl(val)
-                  );
-              }
+    std::vector<cvc5::DatatypeConstructorDecl> enum_ctrs;
+    for (const auto & val: $4){
+        enum_ctrs.emplace_back(
+          driver.slv->mkDatatypeConstructorDecl(val)
+        );
+    }
 
-              for (const auto & ctor: enum_ctrs){
-                  enum_spec.addConstructor(ctor);
-              }
+    for (const auto & ctor: enum_ctrs){
+        enum_spec.addConstructor(ctor);
+    }
 
-              auto enum_sort = driver.slv->mkDatatypeSort(enum_spec);
-              driver.string_sort_map[$1] = enum_sort;
+    auto enum_sort = driver.slv->mkDatatypeSort(enum_spec);
+    driver.string_sort_map[$1] = enum_sort;
 
-            }
-            break;
-            default: break;
-          }
+  }
 };
 wom_enums : wom_enums "," WORD {
-  switch (driver.p) {
-    case phase1: {
+    if (driver.p == phase1) {
       $$ = $1;
       $$.emplace_back($3);
     }
-    break;
-    default: break;
-  }
 };
 | WORD {
-  switch (driver.p) {
-    case phase1: {
+    if (driver.p == phase1) {
       std::vector<std::string> t;
       t.emplace_back($1);
       $$ = t;
-    } break;
-      default: break;
-  }
+    }
 };
 
 
 wom_decleration : wom_decleration declaration {
-
-  switch (driver.p) {
-    case phase1: {
-      $$ = $1;
-      $$.emplace_back($2);
-    }
-    break;
-    default: break;
+  if (driver.p == phase1) {
+    $$ = $1;
+    $$.emplace_back($2);
   }
-
 };  | declaration {
-    switch (driver.p) {
-      case phase1: {
-        std::vector<pair_string_sort> t;
-        t.emplace_back($1);
-        $$ = t;
-      } break;
-        default: break;
-    }
+  if (driver.p == phase1) {
+    std::vector<pair_string_sort> t;
+    t.emplace_back($1);
+    $$ = t;
+  } 
 };
 
 declaration : named_decl "."
@@ -534,146 +506,119 @@ declaration : named_decl "."
             | tuple_decl "."
 
 named_decl : WORD either_in_or_is WORD {    
-    switch (driver.p)
-    {
-        case phase1: {
-          std::string name {$1};
-          SortString sort_string($3);
+  if (driver.p == phase1) {
+    std::string name {$1};
+    SortString sort_string($3);
 
-          if ( driver.string_sort_map.contains(sort_string.value) ){
+    if ( driver.string_sort_map.contains(sort_string.value) ){
 
-              $$ = std::make_pair(
-                name,
-                driver.string_sort_map[sort_string.value]
-              );
+        $$ = std::make_pair(
+          name,
+          driver.string_sort_map[sort_string.value]
+        );
 
-          }
-          else {
-
-              $$ = std::make_pair(name,sort_string);
-
-          }
-          
-        }
-        break;
-      
-      default: break;
     }
+    else {
+
+        $$ = std::make_pair(name,sort_string);
+
+    }
+    
+  }
       
 };
 set_decl : WORD "is-set-of" WORD {
-    switch (driver.p)
-    {
-        case phase1: {
-          std::string name {$1};
-          SetString set_string($3);
+  if (driver.p == phase1) {
+    std::string name {$1};
+    SetString set_string($3);
 
-          if ( ! driver.string_sort_map.contains(set_string.value) ){
+    if ( ! driver.string_sort_map.contains(set_string.value) ){
 
-              $$ = std::make_pair(name,set_string);
+        $$ = std::make_pair(name,set_string);
 
-          }
-          else {
-              auto set_sort = driver.slv->mkSetSort(
-                driver.string_sort_map[set_string.value]
-              );
-              $$ = std::make_pair(name,set_sort);
-          }
-          
-        }
-        break;
-      default: break;
     }
+    else {
+        auto set_sort = driver.slv->mkSetSort(
+          driver.string_sort_map[set_string.value]
+        );
+        $$ = std::make_pair(name,set_sort);
+    }
+    
+  }
 
 };
 //TODO: second word can be expression
 array_decl  : WORD "maps" WORD "to" WORD {
-   switch (driver.p)
-    {
-        case phase1: {
-          std::string name {$1};
-          std::string dom_string {$3};
-          std::string rng_string {$3};
+  if (driver.p == phase1) {
+    std::string name {$1};
+    std::string dom_string {$3};
+    std::string rng_string {$3};
 
-          if ( ! driver.string_sort_map.contains(dom_string) &&
-               ! driver.string_sort_map.contains(rng_string)    ){
+    if ( ! driver.string_sort_map.contains(dom_string) &&
+          ! driver.string_sort_map.contains(rng_string)    ){
 
-                auto array_string = std::make_pair(dom_string,rng_string);
-                $$ = std::make_pair(name,array_string);
-          }
-          else {
-
-            auto array_sort = driver.slv->mkArraySort(
-              driver.string_sort_map[dom_string],
-              driver.string_sort_map[rng_string]
-            );
-
-            $$ = std::make_pair(name,array_sort);
-          }
-        }
-        break;
-      default: break;
+          auto array_string = std::make_pair(dom_string,rng_string);
+          $$ = std::make_pair(name,array_string);
     }
+    else {
+
+      auto array_sort = driver.slv->mkArraySort(
+        driver.string_sort_map[dom_string],
+        driver.string_sort_map[rng_string]
+      );
+
+      $$ = std::make_pair(name,array_sort);
+    }
+  }
 };
 tuple_decl  : WORD either_in_or_is "(" wom_types ")" {
-  switch (driver.p) {
-    case phase1: {
-      
-      bool all_sorts_known = true;
-      std::vector<sort_or_string> sorts_for_tuple;
+  if (driver.p == phase1) {
+    
+    bool all_sorts_known = true;
+    std::vector<sort_or_string> sorts_for_tuple;
 
-      for ( const auto & sort : $4 ) {
-          if ( driver.string_sort_map.contains(sort) ) {
-              sorts_for_tuple.emplace_back( 
-                  driver.string_sort_map[sort]
-               );
-          }
-          else {
-              sorts_for_tuple.emplace_back(sort);
-              all_sorts_known = false;
-          }
-      }
+    for ( const auto & sort : $4 ) {
+        if ( driver.string_sort_map.contains(sort) ) {
+            sorts_for_tuple.emplace_back( 
+                driver.string_sort_map[sort]
+              );
+        }
+        else {
+            sorts_for_tuple.emplace_back(sort);
+            all_sorts_known = false;
+        }
+    }
 
-      if ( all_sorts_known ) {
+    if ( all_sorts_known ) {
 
-          std::vector<cvc5::Sort> tmp_sort;
-          for ( const auto & sort : sorts_for_tuple ) {
-              tmp_sort.emplace_back(std::get<cvc5::Sort>(sort));
-          }
+        std::vector<cvc5::Sort> tmp_sort;
+        for ( const auto & sort : sorts_for_tuple ) {
+            tmp_sort.emplace_back(std::get<cvc5::Sort>(sort));
+        }
 
-          auto tuple_sort = driver.slv->mkTupleSort( tmp_sort ) ;
-          $$ = std::make_pair($1,tuple_sort);
-
-      }
-      else {
-        
-        $$ = std::make_pair($1,sorts_for_tuple);
-
-      }
+        auto tuple_sort = driver.slv->mkTupleSort( tmp_sort ) ;
+        $$ = std::make_pair($1,tuple_sort);
 
     }
-    break;
-    default: break;
+    else {
+      
+      $$ = std::make_pair($1,sorts_for_tuple);
+
+    }
+
   }
 };
 wom_types  : wom_types "," WORD {
-  switch (driver.p) {
-    case phase1: {
-      $$ = $1;
-      $$.emplace_back($3);
-    }
-    break;
-    default: break;
+  if (driver.p == phase1) {
+    $$ = $1;
+    $$.emplace_back($3);
   }
 };
 | WORD {
-  switch (driver.p) {
-    case phase1: {
-      std::vector<std::string> t;
-      t.emplace_back($1);
-      $$ = t;
-    } break;
-      default: break;
+  if (driver.p == phase1) {
+    std::vector<std::string> t;
+    t.emplace_back($1);
+    $$ = t;
   }
 };
 
@@ -692,88 +637,83 @@ init : struct_init | array_init
 array_init  : "start" "for" WORD "is" array_map_init "end" "start"
 struct_init : "start" "for" WORD "is" basic_init "end" "start"
 member_init : "start" "for" "members" "is" basic_init "end" "start" {
-    switch (driver.p) {
-      case phase2: {
+    if(driver.p == phase2) {
 
-        //TODO: assert size of keys in init is size of mems
-        //      or ignore size mismatch and implement default
-        //      initializer and notify user
+      //TODO: assert size of keys in init is size of mems
+      //      or ignore size mismatch and implement default
+      //      initializer and notify user
 
+      
+      std::vector<cvc5::Term> set_field_terms;
+
+      // loop through member name to init vec
+      for ( const auto&[mem_name,init_term] : $5 ) {
+
+        // create update term
+        auto field_updater_term = 
+            driver.members
+                  .getSort()
+                  .getDatatype()[acc::fields]
+                  .getSelector(mem_name)
+                  .getUpdaterTerm();
         
-        std::vector<cvc5::Term> set_field_terms;
-
-        // loop through member name to init vec
-        for ( const auto&[mem_name,init_term] : $5 ) {
-
-          // create update term
-          auto field_updater_term = 
-              driver.members
-                    .getSort()
-                    .getDatatype()[acc::fields]
-                    .getSelector(mem_name)
-                    .getUpdaterTerm();
-         
-          auto restart_field_term = driver.slv->mkTerm(
-              cvc5::Kind::APPLY_UPDATER,
-              {field_updater_term,
-               driver.members,
-               init_term}
-          );
-
-          set_field_terms.push_back(restart_field_term);
-        }
-        // make restart function
-        auto member_restart_sort = driver.slv->mkFunctionSort(
-            {driver.members.getSort()},
-            driver.members.getSort()
+        auto restart_field_term = driver.slv->mkTerm(
+            cvc5::Kind::APPLY_UPDATER,
+            {field_updater_term,
+              driver.members,
+              init_term}
         );
 
-        auto member_restart_fn = driver.slv->mkConst(
-            member_restart_sort,
-            "start_members"
+        set_field_terms.push_back(restart_field_term);
+      }
+      // make restart function
+      auto member_restart_sort = driver.slv->mkFunctionSort(
+          {driver.members.getSort()},
+          driver.members.getSort()
+      );
+
+      auto member_restart_fn = driver.slv->mkConst(
+          member_restart_sort,
+          "start_members"
+      );
+
+      //  apply function
+      driver.module_fns["members"] = member_restart_fn;
+
+      auto apply_fn = driver.slv->mkTerm(
+          cvc5::Kind::APPLY_UF,
+          {member_restart_fn, driver.members}
+      );
+
+      // build terms
+      std::vector<cvc5::Term> set_all_members_term;
+      for ( const auto& f_t : set_field_terms ) {
+
+        set_all_members_term.emplace_back( 
+          driver.slv->mkTerm(
+            cvc5::Kind::EQUAL,
+            { apply_fn, f_t }
+          )
         );
-
-        //  apply function
-        driver.module_fns["members"] = member_restart_fn;
-
-        auto apply_fn = driver.slv->mkTerm(
-            cvc5::Kind::APPLY_UF,
-            {member_restart_fn, driver.members}
-        );
-
-        // build terms
-        std::vector<cvc5::Term> set_all_members_term;
-        for ( const auto& f_t : set_field_terms ) {
-
-          set_all_members_term.emplace_back( 
-            driver.slv->mkTerm(
-              cvc5::Kind::EQUAL,
-              { apply_fn, f_t }
-            )
-          );
-
-        }
-
-        if ( set_all_members_term.size() == 1  ){
-            driver.slv->assertFormula(
-                set_all_members_term[0]
-            );
-        }
-        else {
-            driver.slv->assertFormula(
-                driver.slv->mkTerm(
-                    cvc5::Kind::AND,
-                    set_all_members_term
-                )
-            );
-        }
-
 
       }
-      break;
 
-      default: break;
-    };
+      if ( set_all_members_term.size() == 1  ){
+          driver.slv->assertFormula(
+              set_all_members_term[0]
+          );
+      }
+      else {
+          driver.slv->assertFormula(
+              driver.slv->mkTerm(
+                  cvc5::Kind::AND,
+                  set_all_members_term
+              )
+          );
+      }
+
+
+    }
 };
 
 array_map_init : wom_structure_mapping
@@ -783,34 +723,22 @@ wom_structure_mapping  : wom_structure_mapping "," structure_mapping | structure
 structure_mapping : structure ":=" structure
 
 wom_word_to_structure_mapping : wom_word_to_structure_mapping "," word_to_structure {
-    switch (driver.p) {
-      case phase2: {
-        $$ = $1;
-        $$.emplace_back($3);
-      };
-      break;
-      default: break;
-    };
+    if(driver.p == phase2) {
+      $$ = $1;
+      $$.emplace_back($3);
+    }
 }; | word_to_structure {
-    switch (driver.p) {
-      case phase2: {
-        std::vector<pair_string_term> t;
-        t.emplace_back($1);
-        $$ = t;
-      };
-      break;
-      default: break;
-    };
+    if(driver.p == phase2) {
+      std::vector<pair_string_term> t;
+      t.emplace_back($1);
+      $$ = t;
+    }
 };
 
 word_to_structure :  WORD ":=" structure {
-    switch (driver.p) {
-      case phase2: {
-        $$ = std::make_pair($1,$3);
-      };
-      break;
-      default: break;
-    };
+    if(driver.p == phase2) {
+      $$ = std::make_pair($1,$3);
+    }
 };
 
 
@@ -837,49 +765,29 @@ determining_exprs : "-" expr "."
 
 quantifier 
   : "any" {
-    switch (driver.p) {
-      case phase3: {
-        $$ = std::make_pair(quant::any,0);
-      };
-      break;
-      default: break;
-    };
+    if (driver.p == phase3) {
+      $$ = std::make_pair(quant::any,0);
+    }
 };
   | "all" {
-    switch (driver.p) {
-      case phase3: {
-        $$ = std::make_pair(quant::all,0);
-      };
-      break;
-      default: break;
-    };
+    if (driver.p == phase3) {
+      $$ = std::make_pair(quant::all,0);
+    }
 };
   | "at" "most" INT {
-    switch (driver.p) {
-      case phase3: {
-        $$ = std::make_pair(quant::at_most,$3);
-      };
-      break;
-      default: break;
-    };
+    if (driver.p == phase3) {
+      $$ = std::make_pair(quant::at_most,$3);
+    }
 };
   | "at" "least" INT {
-    switch (driver.p) {
-      case phase3: {
-        $$ = std::make_pair(quant::at_least,$3);
-      };
-      break;
-      default: break;
-    };
+    if (driver.p == phase3) {
+      $$ = std::make_pair(quant::at_least,$3);
+    }
 };
   | "always" {
-    switch (driver.p) {
-      case phase3: {
-        $$ = std::make_pair(quant::always,0);
-      };
-      break;
-      default: break;
-    };
+    if (driver.p == phase3) {
+      $$ = std::make_pair(quant::always,0);
+    }
 };
 //TODO: add or equal to to at most or at least
      
@@ -942,109 +850,92 @@ arithmatic  : term
 
 name_sel  : WORD {
 
-  switch (driver.p) {
-    case phase2: { 
-      std::string member_name{ $1 };
+  if(driver.p == phase2) { 
+    std::string member_name{ $1 };
 
-      auto mem_sel = driver.members 
-                           .getSort()
-                           .getDatatype()[acc::fields]
-                           .getSelector(member_name)
-                           .getTerm(); 
+    auto mem_sel = driver.members 
+                          .getSort()
+                          .getDatatype()[acc::fields]
+                          .getSelector(member_name)
+                          .getTerm(); 
 
-      
-      auto field_term = driver.slv->mkTerm(
-          cvc5::Kind::APPLY_SELECTOR,
-          { mem_sel , driver.members }
-      );
+    
+    auto field_term = driver.slv->mkTerm(
+        cvc5::Kind::APPLY_SELECTOR,
+        { mem_sel , driver.members }
+    );
 
-      $$ = field_term;
-    }break;
-
-    default: break;
-  };
+    $$ = field_term;
+  }
 
 }; | WORD wom_sel {
 
-    switch (driver.p) {
-      case phase2: {
-        
-       std::string member_name = std::string($1);
-       std::vector<std::string> selectors_vec { $2 };
-       auto mem_sel = driver.members 
-                            .getSort()
-                            .getDatatype()[acc::fields]
-                            .getSelector(member_name)
-                            .getTerm();
-        
-        auto field_term = driver.slv->mkTerm(
-            cvc5::Kind::APPLY_SELECTOR,
-            { mem_sel, driver.members }
-        );
+    if(driver.p == phase2) {
+      
+      std::string member_name = std::string($1);
+      std::vector<std::string> selectors_vec { $2 };
+      auto mem_sel = driver.members 
+                          .getSort()
+                          .getDatatype()[acc::fields]
+                          .getSelector(member_name)
+                          .getTerm();
+      
+      auto field_term = driver.slv->mkTerm(
+          cvc5::Kind::APPLY_SELECTOR,
+          { mem_sel, driver.members }
+      );
 
-        auto curr_sel    { mem_sel };    //cvc5 selector
-        auto temp_term   { field_term }; //cvc5 term
-        for ( std::size_t i = 1; i < selectors_vec.size() ; i+= 1 ) {
+      auto curr_sel    { mem_sel };    //cvc5 selector
+      auto temp_term   { field_term }; //cvc5 term
+      for ( std::size_t i = 1; i < selectors_vec.size() ; i+= 1 ) {
 
-          std::string next_sel_name = selectors_vec[i] ;
+        std::string next_sel_name = selectors_vec[i] ;
 
-          curr_sel = curr_sel 
-                     .getSort() 
-                     .getDatatype()[acc::fields]
-                     .getSelector(next_sel_name) 
-                     .getTerm();
+        curr_sel = curr_sel 
+                    .getSort() 
+                    .getDatatype()[acc::fields]
+                    .getSelector(next_sel_name) 
+                    .getTerm();
 
-          temp_term = driver.slv->mkTerm(
-              cvc5::Kind::APPLY_SELECTOR,
-              { curr_sel, temp_term }
-          );
-        }
-
-        // vec is never empty via grammar rules
-        std::string field_to_sel { selectors_vec.back() }; 
-
-        curr_sel = temp_term 
-                     .getSort() 
-                     .getDatatype()[acc::fields]
-                     .getSelector(field_to_sel) 
-                     .getTerm();
-
-        field_term = driver.slv->mkTerm(
+        temp_term = driver.slv->mkTerm(
             cvc5::Kind::APPLY_SELECTOR,
             { curr_sel, temp_term }
         );
-        
-        $$ = field_term;
+      }
 
-      };
-      break;
-      default: break;
+      // vec is never empty via grammar rules
+      std::string field_to_sel { selectors_vec.back() }; 
+
+      curr_sel = temp_term 
+                    .getSort() 
+                    .getDatatype()[acc::fields]
+                    .getSelector(field_to_sel) 
+                    .getTerm();
+
+      field_term = driver.slv->mkTerm(
+          cvc5::Kind::APPLY_SELECTOR,
+          { curr_sel, temp_term }
+      );
+      
+      $$ = field_term;
+
     };
-
 
 };
 
 lhs_member  : WORD | WORD wom_sel
 
 wom_sel : wom_sel "->" WORD {
-  switch (driver.p) {
-    case phase2: {
-      $$ = $1;
-      $$.emplace_back($3);
-    };
-    break;
-    default: break;
-  };
+  if(driver.p == phase2) {
+    $$ = $1;
+    $$.emplace_back($3);
+  }
 };      | "->" WORD {
-  switch (driver.p) {
-    case phase2: {
-      std::vector<std::string> t;
-      t.emplace_back($2);
-      $$ = t;
-    };
-    break;
-    default: break;
-  };
+  if(driver.p == phase2) {
+    std::vector<std::string> t;
+    t.emplace_back($2);
+    $$ = t;
+  }
 }
 
 term  : atom
@@ -1054,25 +945,17 @@ structure : atom
 /*TODO: struct map*/
 /*
       | "{" wom_structure_row "}" {
-        switch (driver.p) {
-          case phase2: {
-          };
-          break;
-          default: break;
-        };
+          if(driver.p == phase2) {
+          }
 };
 wom_structure_row : wom_structure_row "," structure_row | structure_row
 structure_row : WORD ":" structure
 */
 
 atom : INT {
-  switch (driver.p) {
-    case phase2: {
-      $$ = driver.slv->mkInteger($1);
-    };
-    break;
-    default: break;
-  };
+  if(driver.p == phase2) {
+    $$ = driver.slv->mkInteger($1);
+  }
 }; | FLOAT {
   //TODO: float -> bitvector nonsense
 };
