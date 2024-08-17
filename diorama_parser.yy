@@ -16,6 +16,7 @@
   #include <vector>
   #include <unordered_map>
   #include <queue>
+  #include <optional>
   #include <cvc5/cvc5.h>
 	
 
@@ -190,6 +191,7 @@ RBRACE     "}"
 %type <std::vector<pair_string_term>> wom_word_to_structure_mapping basic_init
 
 %type <cond_op_and_limit> quantifier
+%type <std::optional<cond_op_and_limit>> zow_quantifier
 
 %type <std::string> word_or_members
 
@@ -200,6 +202,7 @@ RBRACE     "}"
 %printer { yyoutput << "todo"; } <vec_pair_strings>;
 %printer { yyoutput << "todo"; } <std::vector<std::string>>;
 %printer { yyoutput << "todo"; } <pair_string_term>;
+%printer { yyoutput << "todo"; } <std::optional<cond_op_and_limit>>;
 %printer { yyoutput << "todo"; } <cond_op_and_limit>;
 %printer { yyoutput << "todo"; } <pair_string_sort>;
 %printer { yyoutput << $$; } <*>;
@@ -817,7 +820,15 @@ rule : "rule" zow_word "is" wom_when_blocks wom_then_blocks "end" "rule"
 wom_when_blocks : wom_when_blocks "or" when_block | when_block
 wom_then_blocks : wom_then_blocks "or" then_block | then_block
 when_block : "when" zow_quantifier ":" zom_determining_exprs
-zow_quantifier : %empty | quantifier
+zow_quantifier : %empty {
+  if (driver.p == phase3){
+    $$ = std::nullopt;
+  }
+} | quantifier {
+  if (driver.p == phase3){
+    $$ = $1;
+  }
+}
 zom_determining_exprs : %empty | zom_determining_exprs determining_exprs
 then_block : "then" ":" wom_stmts
 wom_stmts : wom_stmts stmt | stmt
