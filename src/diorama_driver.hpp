@@ -38,7 +38,9 @@ public:
 
 
   // constrain solver fields
-  std::unique_ptr<cvc5::Solver> slv;
+  std::unique_ptr<cvc5::Solver>      slv;
+  std::unique_ptr<cvc5::TermManager> tm;
+  
   cvc5::Term members; 
 
   bool members_declared;
