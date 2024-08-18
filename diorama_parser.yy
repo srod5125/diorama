@@ -17,6 +17,7 @@
   #include <unordered_map>
   #include <queue>
   #include <optional>
+  #include <tuple>
   #include <cvc5/cvc5.h>
 	
 
@@ -63,6 +64,11 @@
   enum class quant { any, all, at_least, at_most, always };
 
   using cond_op_and_limit = std::pair<quant,int>;
+
+  using range_type = std::tuple<
+    cvc5::Kind,cvc5::Kind,
+    cvc5::Term,cvc5::Term
+  >;
 
 }
 
@@ -173,9 +179,16 @@ RBRACE     "}"
 %type <cvc5::Term> name_sel 
 %type <cvc5::Term> tuple_val 
 %type <cvc5::Term> enum_val
-%type <cvc5::Term> atom
-%type <cvc5::Term> structure
 
+%type <cvc5::Term> atom term structure expr
+%type <cvc5::Term> equality
+%type <cvc5::Term> set_opers
+%type <cvc5::Term> membership
+%type <cvc5::Term> arithmatic
+%type <cvc5::Term> determining_exprs
+%type <cvc5::Term> stmt
+
+%type <range_type> range
 
 %type <pair_string_sort> declaration 
 %type <pair_string_sort> named_decl 
@@ -189,20 +202,22 @@ RBRACE     "}"
 %type <std::vector<std::string>> wom_enums wom_types wom_sel
 %type <std::vector<pair_string_sort>> wom_decleration
 %type <std::vector<pair_string_term>> wom_word_to_structure_mapping basic_init
+%type <std::vector<cvc5::Term>> wom_stmts zom_determining_exprs
 
 %type <cond_op_and_limit> quantifier
 %type <std::optional<cond_op_and_limit>> zow_quantifier
-
+%type <std::optional<bool>> zow_or_equals
 %type <std::string> word_or_members
 
 %printer { yyoutput << "todo"; } <cvc5::Term>;
 %printer { yyoutput << "todo"; } <std::vector<pair_string_sort>>;
 %printer { yyoutput << "todo"; } <std::vector<pair_string_term>>;
-%printer { yyoutput << "todo"; } <pair_of_strings>;
-%printer { yyoutput << "todo"; } <vec_pair_strings>;
 %printer { yyoutput << "todo"; } <std::vector<std::string>>;
+%printer { yyoutput << "todo"; } <std::vector<cvc5::Term>>;
 %printer { yyoutput << "todo"; } <pair_string_term>;
+%printer { yyoutput << "todo"; } <std::optional<bool>>;
 %printer { yyoutput << "todo"; } <std::optional<cond_op_and_limit>>;
+%printer { yyoutput << "todo"; } <range_type>;
 %printer { yyoutput << "todo"; } <cond_op_and_limit>;
 %printer { yyoutput << "todo"; } <pair_string_sort>;
 %printer { yyoutput << $$; } <*>;
@@ -749,46 +764,75 @@ wom_when_blocks : wom_when_blocks "or" when_block | when_block
 wom_then_blocks : wom_then_blocks "or" then_block | then_block
 when_block : "when" zow_quantifier ":" zom_determining_exprs
 zow_quantifier : %empty {
-  if (driver.p == phase3){
-    $$ = std::nullopt;
+    if (driver.p == phase3){
+      $$ = std::nullopt;
+    }
+  };
+  | quantifier {
+    if (driver.p == phase3){
+      $$ = $1;
+    }
+  };
+zom_determining_exprs : %empty {
+    if ( driver.p == phase3 ){
+      $$ = {};
+    }
+  }; 
+  | zom_determining_exprs determining_exprs {
+    if ( driver.p == phase3 ){
+      $$ = $1;
+      $$.emplace_back($2);
+    }
   }
-} | quantifier {
-  if (driver.p == phase3){
-    $$ = $1;
+determining_exprs : "-" expr "." {
+    if (driver.p == phase3){
+      $$ = $2;
+    }
   }
-}
-zom_determining_exprs : %empty | zom_determining_exprs determining_exprs
-then_block : "then" ":" wom_stmts
-wom_stmts : wom_stmts stmt | stmt
 
-determining_exprs : "-" expr "."
+then_block : "then" ":" wom_stmts
+
+wom_stmts : wom_stmts stmt {
+    if (driver.p == phase3) {
+      $$ = $1;
+      $$.emplace_back($2);
+    }
+  };
+  | stmt {
+    if (driver.p == phase3) {
+      std::vector<cvc5::Term> t;
+      t.emplace_back($1);
+      $$ = t;
+    }
+  };
+
 
 quantifier 
   : "any" {
     if (driver.p == phase3) {
       $$ = std::make_pair(quant::any,0);
     }
-};
+  };
   | "all" {
     if (driver.p == phase3) {
       $$ = std::make_pair(quant::all,0);
     }
-};
+  };
   | "at" "most" INT {
     if (driver.p == phase3) {
       $$ = std::make_pair(quant::at_most,$3);
     }
-};
+  };
   | "at" "least" INT {
     if (driver.p == phase3) {
       $$ = std::make_pair(quant::at_least,$3);
     }
-};
+  };
   | "always" {
     if (driver.p == phase3) {
       $$ = std::make_pair(quant::always,0);
     }
-};
+  };
 //TODO: add or equal to to at most or at least
      
 stmt : if_stmt
@@ -810,42 +854,247 @@ filter : "such" "that" expr
 assignment : lhs_member "'" ":=" expr
 
 expr  : equality
-      | expr "and" equality
-      | expr "or" equality
-      | expr "or-rather" equality
-      | "not" expr
+      | expr "and" equality {
+        if ( driver.p == phase3 ) {
+          $$ = driver.slv->mkTerm(
+            cvc5::Kind::AND,
+            {$1,$3}
+          );
+        }
+      }
+      | expr "or" equality{
+        if ( driver.p == phase3 ) {
+          $$ = driver.slv->mkTerm(
+            cvc5::Kind::OR,
+            {$1,$3}
+          );
+        }
+      }
+      | expr "or-rather" equality{
+        if ( driver.p == phase3 ) {
+          $$ = driver.slv->mkTerm(
+            cvc5::Kind::XOR,
+            {$1,$3}
+          );
+        }
+      }
+      | "not" expr {
+        if ( driver.p == phase3 ) {
+          $$ = driver.slv->mkTerm(
+            cvc5::Kind::NOT,
+            {$2}
+          );
+        }
+      }
 
 equality  : set_opers
-          | equality "equals" set_opers
-          | equality "not-equals" set_opers
+          | equality "equals" set_opers {
+            if ( driver.p == phase3 ) {
+              $$ = driver.slv->mkTerm(
+                cvc5::Kind::EQUAL,
+                {$1,$3}
+              );
+            }
+          }
+          | equality "not-equals" set_opers {
+            if ( driver.p == phase3 ) {
+              auto equal = driver.slv->mkTerm(
+                cvc5::Kind::EQUAL,
+                {$1,$3}
+              );
+              $$ = driver.slv->mkTerm(
+                cvc5::Kind::NOT,
+                {equal}
+              );
+            }
+          }
 
 set_opers  : membership
-           | set_opers "unions" membership
-           | set_opers "intersects" membership
-           | set_opers "differences" membership
-           | set_opers "is-in" membership
-           | set_opers "is-subset" membership
-           | "compliments" set_opers
+           | set_opers "unions" membership {
+              if ( driver.p == phase3 ) {
+                $$ = driver.slv->mkTerm(
+                  cvc5::Kind::SET_UNION,
+                  {$1,$3}
+                );
+              }
+            }
+           | set_opers "intersects" membership {
+              if ( driver.p == phase3 ) {
+                $$ = driver.slv->mkTerm(
+                  cvc5::Kind::SET_INTER,
+                  {$1,$3}
+                );
+              }
+            }
+           | set_opers "differences" membership {
+              if ( driver.p == phase3 ) {
+                $$ = driver.slv->mkTerm(
+                  cvc5::Kind::SET_MINUS,
+                  {$1,$3}
+                );
+              }
+            }
+           | set_opers "is-in" membership {
+              if ( driver.p == phase3 ) {
+                $$ = driver.slv->mkTerm(
+                  cvc5::Kind::SET_MEMBER,
+                  {$1,$3}
+                );
+              }
+            }
+           | set_opers "is-subset" membership {
+              if ( driver.p == phase3 ) {
+                $$ = driver.slv->mkTerm(
+                  cvc5::Kind::SET_SUBSET,
+                  {$1,$3}
+                );
+              }
+            }
+           | "compliments" set_opers {
+              if ( driver.p == phase3 ) {
+                $$ = driver.slv->mkTerm(
+                  cvc5::Kind::SET_COMPLEMENT,
+                  {$2}
+                );
+              }
+            }
 
 membership  : arithmatic
-            | membership "is-greater-than" zow_or_equals arithmatic
-            | membership "is-less-than" zow_or_equals arithmatic
-            | membership zow_is "between" range
-zow_is : %empty | "is"
-zow_or_equals : %empty | "or-equals"
+            | membership "is-greater-than" zow_or_equals arithmatic {
+              if ( driver.p == phase3 ) {
+
+                bool has_or_equals = $3.value_or(false);
+                cvc5::Kind gtoe = has_or_equals ? cvc5::Kind::GEQ : cvc5::Kind::GT;
+               
+                $$ = driver.slv->mkTerm(
+                  gtoe, {$1,$4}
+                );
+              }
+            }
+            | membership "is-less-than" zow_or_equals arithmatic {
+              if ( driver.p == phase3 ) {
+
+                bool has_or_equals = $3.value_or(false);
+                cvc5::Kind ltoe = has_or_equals ? cvc5::Kind::LEQ : cvc5::Kind::LT;
+               
+                $$ = driver.slv->mkTerm(
+                  ltoe, {$1,$4}
+                );
+              }
+            }
+            | membership zow_is "between" range {
+              if ( driver.p == phase3 ) {
+                
+                auto range = $4;
+                cvc5::Kind lower_kind = std::get<0>(range);
+                cvc5::Kind upper_kind = std::get<1>(range);
+                cvc5::Term lower_term = std::get<2>(range);
+                cvc5::Term upper_term = std::get<3>(range);
+
+                auto lower_range = driver.slv->mkTerm(
+                  lower_kind, {$1,lower_term}
+                );
+
+                auto upper_range = driver.slv->mkTerm(
+                  upper_kind, {$1,upper_term}
+                );
+
+                $$ = driver.slv->mkTerm(
+                  cvc5::Kind::AND,
+                  { lower_range, upper_range }
+                );
+
+              }
+            }
+
+zow_is : %empty  | "is"
+
+zow_or_equals : %empty {
+  if (driver.p == phase3) {
+    $$ = std::nullopt;
+  }
+}; | "or-equals" {
+  if (driver.p == phase3) {
+    $$ = true;
+  }
+};
 
 
-range  :     arithmatic ".." arithmatic
-       | "(" arithmatic ".." arithmatic ")"
-       | "(" arithmatic ".." arithmatic "]"
-       | "[" arithmatic ".." arithmatic ")"
-       | "[" arithmatic ".." arithmatic "]"
+range : arithmatic ".." arithmatic {
+       if (driver.p == phase3) {
+        //defualt is inclusive
+        $$ = std::make_tuple(
+          cvc5::Kind::GEQ,cvc5::Kind::LEQ,
+          $1,$3
+        );
+       }
+      }
+      | "(" arithmatic ".." arithmatic ")" {
+       if (driver.p == phase3) {
+        $$ = std::make_tuple(
+          cvc5::Kind::GT,cvc5::Kind::LT,
+          $2,$4
+        );
+       }
+      }
+      | "(" arithmatic ".." arithmatic "]" {
+       if (driver.p == phase3) {
+        $$ = std::make_tuple(
+          cvc5::Kind::GT,cvc5::Kind::LEQ,
+          $2,$4
+        );
+       }
+      }
+      | "[" arithmatic ".." arithmatic ")" {
+       if (driver.p == phase3) {
+        $$ = std::make_tuple(
+          cvc5::Kind::GEQ,cvc5::Kind::LT,
+          $2,$4
+        );
+       }
+      }
+      | "[" arithmatic ".." arithmatic "]" {
+       if (driver.p == phase3) {
+        $$ = std::make_tuple(
+          cvc5::Kind::GEQ,cvc5::Kind::LEQ,
+          $2,$4
+        );
+       }
+      }
 
 arithmatic  : term
-            | arithmatic "+" term
-            | arithmatic "-" term
-            | arithmatic "*" term
-            | arithmatic "/" term
+            | arithmatic "+" term {
+              if (driver.p == phase3) {
+                $$ = driver.slv->mkTerm(
+                  cvc5::Kind::ADD,
+                  {$1,$3}
+                );
+              }
+            }
+            | arithmatic "-" term {
+              if (driver.p == phase3) {
+                $$ = driver.slv->mkTerm(
+                  cvc5::Kind::SUB,
+                  {$1,$3}
+                );
+              }
+            }
+            | arithmatic "*" term {
+              if (driver.p == phase3) {
+                $$ = driver.slv->mkTerm(
+                  cvc5::Kind::MULT,
+                  {$1,$3}
+                );
+              }
+            }
+            | arithmatic "/" term {
+              if (driver.p == phase3) {
+                $$ = driver.slv->mkTerm(
+                  cvc5::Kind::INTS_DIVISION,
+                  {$1,$3}
+                );
+              }
+            }
 
 
 name_sel  : WORD {
@@ -868,7 +1117,8 @@ name_sel  : WORD {
     $$ = field_term;
   }
 
-}; | WORD wom_sel {
+}; 
+  | WORD wom_sel {
 
     if(driver.p == phase2) {
       
@@ -926,20 +1176,21 @@ name_sel  : WORD {
 lhs_member  : WORD | WORD wom_sel
 
 wom_sel : wom_sel "->" WORD {
-  if(driver.p == phase2) {
-    $$ = $1;
-    $$.emplace_back($3);
+    if(driver.p == phase2) {
+      $$ = $1;
+      $$.emplace_back($3);
+    }
+  }      
+  | "->" WORD {
+    if(driver.p == phase2) {
+      std::vector<std::string> t;
+      t.emplace_back($2);
+      $$ = t;
+    }
   }
-};      | "->" WORD {
-  if(driver.p == phase2) {
-    std::vector<std::string> t;
-    t.emplace_back($2);
-    $$ = t;
-  }
-}
 
 term  : atom
-      | "(" expr ")"
+      | "(" expr ")" { if (driver.p == phase3) $$=$2; }
 
 structure : atom 
 /*TODO: struct map*/
@@ -971,7 +1222,10 @@ wom_atom : wom_atom "," atom | atom
 
 
 //TODO: ensure members can only be declared once
+
 //TODO: -Wcounterexamples
+
+//TODO: refactor $$ = $1, to more effecient move or insert
 
 %%
 
