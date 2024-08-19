@@ -19,7 +19,7 @@
   #include <optional>
   #include <tuple>
   #include <cvc5/cvc5.h>
-	
+
 
   //since the parser is the root dependency
   //any global aliases are better placed here
@@ -52,7 +52,7 @@
   using pair_string_sort = std::pair<std::string,sort_or_aux>;
 
   using record_map_aux = std::unordered_map<std::string,sort_or_aux>;
-  
+
   using pair_string_term = std::pair<std::string,cvc5::Term>;
 
   using pair_string_rec = std::pair<std::string,record_map_aux>;
@@ -96,7 +96,7 @@
 
 }
 
-%define api.token.prefix {TOK_} 
+%define api.token.prefix {TOK_}
 %token
 EOF 0      "end of file"
 H1         "#"
@@ -105,7 +105,7 @@ H3         "###"
 H4         "####"
 H5         "#####"
 BLD        "**"
-MEMBERS    "members" 
+MEMBERS    "members"
 ARE        "are"
 END        "end"
 ASSIGN     ":="
@@ -134,12 +134,12 @@ OR         "or"
 WHEN       "when"
 THEN       "then"
 ANY        "any"
-ALL        "all"         
-AT         "at" 
-MOST       "most" 
+ALL        "all"
+AT         "at"
+MOST       "most"
 LEAST      "least"
 ALWAYS     "always"
-IF         "if"   
+IF         "if"
 ELSE       "else"
 SOME       "some"
 SUCH       "such"
@@ -150,19 +150,19 @@ ORRATHER   "or-rather"
 NOT        "not"
 EQ         "equals"
 NOTEQ      "not-equals"
-UNION      "unions" 
-INTERSECT  "intersects" 
-DIFF       "differences" 
-ISIN       "is-in" 
-ISSUB      "is-subset" 
+UNION      "unions"
+INTERSECT  "intersects"
+DIFF       "differences"
+ISIN       "is-in"
+ISSUB      "is-subset"
 COMP       "compliments"
-ISGT       "is-greater-than" 
+ISGT       "is-greater-than"
 ISLT       "is-less-than"
-BTWN       "between" 
+BTWN       "between"
 XOR        "or-equals"
 DOTDOT     ".."
 RBRCKT     "]"
-LBRCKT     "[" 
+LBRCKT     "["
 ARROW      "->"
 LBRACE     "{"
 RBRACE     "}"
@@ -172,12 +172,12 @@ RBRACE     "}"
 
 %token <std::string> WORD
 %token <int> INT
-%token <cvc5::Term> FALSE 
+%token <cvc5::Term> FALSE
 %token <cvc5::Term> TRUE
-%token FLOAT 
+%token FLOAT
 
-%type <cvc5::Term> name_sel 
-%type <cvc5::Term> tuple_val 
+%type <cvc5::Term> name_sel
+%type <cvc5::Term> tuple_val
 %type <cvc5::Term> enum_val
 
 %type <cvc5::Term> atom term structure expr
@@ -187,17 +187,20 @@ RBRACE     "}"
 %type <cvc5::Term> arithmatic
 %type <cvc5::Term> determining_exprs
 %type <cvc5::Term> stmt
+%type <cvc5::Term> if_stmt
+%type <cvc5::Term> selection_stmt
+%type <cvc5::Term> assignment
 
 %type <range_type> range
 
-%type <pair_string_sort> declaration 
-%type <pair_string_sort> named_decl 
-%type <pair_string_sort> set_decl 
-%type <pair_string_sort> array_decl 
-%type <pair_string_sort> tuple_decl 
+%type <pair_string_sort> declaration
+%type <pair_string_sort> named_decl
+%type <pair_string_sort> set_decl
+%type <pair_string_sort> array_decl
+%type <pair_string_sort> tuple_decl
 %type <pair_string_sort> enum_decl
 
-%type <pair_string_term> word_to_structure 
+%type <pair_string_term> word_to_structure
 
 %type <std::vector<std::string>> wom_enums wom_types wom_sel
 %type <std::vector<pair_string_sort>> wom_decleration
@@ -230,7 +233,7 @@ spec : module
 
 module :  "module" WORD "is" data body "end" WORD {
     if (driver.p == phase1) {
-      
+
       if ( ! driver.members_declared ) { /*TODO: throw */ }
 
       int aux_processing_iterrations = driver.aux_string_rec_map.size();
@@ -240,7 +243,7 @@ module :  "module" WORD "is" data body "end" WORD {
 
       for ( int i=0; i < aux_processing_iterrations+1; i+= 1) {
 
-        if ( driver.aux_string_rec_map.empty() ) { 
+        if ( driver.aux_string_rec_map.empty() ) {
             break;
         }
 
@@ -274,7 +277,7 @@ module :  "module" WORD "is" data body "end" WORD {
             }
             else {
               all_sorts_known = false;
-            } 
+            }
 
 
           }
@@ -286,11 +289,11 @@ module :  "module" WORD "is" data body "end" WORD {
             if ( driver.string_sort_map.contains( tmp_dom ) &&
                  driver.string_sort_map.contains( tmp_rng )   ) {
 
-                 
-                auto array_sort = driver.slv->mkArraySort(
+
+                auto array_sort = driver.tm->mkArraySort(
                   driver.string_sort_map[tmp_dom],
                   driver.string_sort_map[tmp_rng]
-                ); 
+                );
 
                 sort = array_sort;
 
@@ -309,7 +312,7 @@ module :  "module" WORD "is" data body "end" WORD {
             for ( auto & sort_t : tmp_sorts ) {
                 auto sort_string { std::get<std::string>(sort_t) };
                 if ( driver.string_sort_map.contains(sort_string) ) {
-                    sorts_for_tuple.emplace_back( 
+                    sorts_for_tuple.emplace_back(
                         driver.string_sort_map[sort_string]
                     );
                 }
@@ -326,7 +329,7 @@ module :  "module" WORD "is" data body "end" WORD {
                   tmp_sorts_for_tuple.emplace_back(std::get<cvc5::Sort>(sort));
               }
 
-              auto tuple_sort = driver.slv->mkTupleSort( tmp_sorts_for_tuple ) ;
+              auto tuple_sort = driver.tm->mkTupleSort( tmp_sorts_for_tuple ) ;
               sort = tuple_sort;
 
             }
@@ -338,8 +341,8 @@ module :  "module" WORD "is" data body "end" WORD {
 
         if ( all_sorts_known ) {
 
-          auto rec_decl = driver.slv->mkDatatypeDecl(record_tmp.first);
-          auto fields = driver.slv->mkDatatypeConstructorDecl(acc::fields);
+          auto rec_decl = driver.tm->mkDatatypeDecl(record_tmp.first);
+          auto fields = driver.tm->mkDatatypeConstructorDecl(acc::fields);
 
           for (const auto & [ field, sort ] : record_tmp.second) {
               fields.addSelector(field, std::get<cvc5::Sort>(sort));
@@ -347,13 +350,13 @@ module :  "module" WORD "is" data body "end" WORD {
 
           rec_decl.addConstructor(fields);
 
-          auto rec_sort = driver.slv->mkDatatypeSort(rec_decl);    
+          auto rec_sort = driver.tm->mkDatatypeSort(rec_decl);
 
           driver.string_sort_map[record_tmp.first] = rec_sort;
 
         }
         else {
-          
+
           driver.aux_string_rec_map.push(record_tmp);
 
         }
@@ -380,9 +383,9 @@ module :  "module" WORD "is" data body "end" WORD {
           }
 
           //driver.record_members_map
-        
+
         }
-      
+
       }
       */
 
@@ -423,12 +426,12 @@ record_decl : "record" word_or_members "are" wom_decleration "end" "record" {
             }
 
         }
-        // we declare & construct a record of the sort 
+        // we declare & construct a record of the sort
         // that is composed of known sorts
         if ( all_sorts_known ) {
 
-            auto rec_decl = driver.slv->mkDatatypeDecl($2);
-            auto fields = driver.slv->mkDatatypeConstructorDecl(acc::fields);
+            auto rec_decl = driver.tm->mkDatatypeDecl($2);
+            auto fields = driver.tm->mkDatatypeConstructorDecl(acc::fields);
 
             for (const auto & [ field, sort ] : record_var) {
                 fields.addSelector(field, std::get<cvc5::Sort>(sort));
@@ -436,12 +439,12 @@ record_decl : "record" word_or_members "are" wom_decleration "end" "record" {
 
             rec_decl.addConstructor(fields);
 
-            auto rec_sort = driver.slv->mkDatatypeSort(rec_decl);
+            auto rec_sort = driver.tm->mkDatatypeSort(rec_decl);
 
 
             if ( $2 == "members" ){
 
-              driver.members = driver.slv->mkConst(rec_sort,"members");
+              driver.members = driver.tm->mkConst(rec_sort,"members");
               driver.members_declared = true;
 
             }
@@ -456,7 +459,7 @@ record_decl : "record" word_or_members "are" wom_decleration "end" "record" {
         //else we append to auxiallry structure
         else {
 
-          driver.aux_string_rec_map.emplace( 
+          driver.aux_string_rec_map.emplace(
             std::make_pair($2,record_var)
           );
 
@@ -464,17 +467,17 @@ record_decl : "record" word_or_members "are" wom_decleration "end" "record" {
 
       }
 };
- 
+
 
 enum_decl : WORD "are" "<" wom_enums ">" {
   if (driver.p == phase1) {
 
-    auto enum_spec = driver.slv->mkDatatypeDecl($1);
+    auto enum_spec = driver.tm->mkDatatypeDecl($1);
 
     std::vector<cvc5::DatatypeConstructorDecl> enum_ctrs;
     for (const auto & val: $4){
         enum_ctrs.emplace_back(
-          driver.slv->mkDatatypeConstructorDecl(val)
+          driver.tm->mkDatatypeConstructorDecl(val)
         );
     }
 
@@ -482,7 +485,7 @@ enum_decl : WORD "are" "<" wom_enums ">" {
         enum_spec.addConstructor(ctor);
     }
 
-    auto enum_sort = driver.slv->mkDatatypeSort(enum_spec);
+    auto enum_sort = driver.tm->mkDatatypeSort(enum_spec);
     driver.string_sort_map[$1] = enum_sort;
 
   }
@@ -512,7 +515,7 @@ wom_decleration : wom_decleration declaration {
     std::vector<pair_string_sort> t;
     t.emplace_back($1);
     $$ = t;
-  } 
+  }
 };
 
 declaration : named_decl "."
@@ -520,7 +523,7 @@ declaration : named_decl "."
             | array_decl "."
             | tuple_decl "."
 
-named_decl : WORD either_in_or_is WORD {    
+named_decl : WORD either_in_or_is WORD {
   if (driver.p == phase1) {
     std::string name {$1};
     SortString sort_string($3);
@@ -538,9 +541,9 @@ named_decl : WORD either_in_or_is WORD {
         $$ = std::make_pair(name,sort_string);
 
     }
-    
+
   }
-      
+
 };
 set_decl : WORD "is-set-of" WORD {
   if (driver.p == phase1) {
@@ -553,12 +556,12 @@ set_decl : WORD "is-set-of" WORD {
 
     }
     else {
-        auto set_sort = driver.slv->mkSetSort(
+        auto set_sort = driver.tm->mkSetSort(
           driver.string_sort_map[set_string.value]
         );
         $$ = std::make_pair(name,set_sort);
     }
-    
+
   }
 
 };
@@ -577,7 +580,7 @@ array_decl  : WORD "maps" WORD "to" WORD {
     }
     else {
 
-      auto array_sort = driver.slv->mkArraySort(
+      auto array_sort = driver.tm->mkArraySort(
         driver.string_sort_map[dom_string],
         driver.string_sort_map[rng_string]
       );
@@ -588,13 +591,13 @@ array_decl  : WORD "maps" WORD "to" WORD {
 };
 tuple_decl  : WORD either_in_or_is "(" wom_types ")" {
   if (driver.p == phase1) {
-    
+
     bool all_sorts_known = true;
     std::vector<sort_or_string> sorts_for_tuple;
 
     for ( const auto & sort : $4 ) {
         if ( driver.string_sort_map.contains(sort) ) {
-            sorts_for_tuple.emplace_back( 
+            sorts_for_tuple.emplace_back(
                 driver.string_sort_map[sort]
               );
         }
@@ -611,12 +614,12 @@ tuple_decl  : WORD either_in_or_is "(" wom_types ")" {
             tmp_sort.emplace_back(std::get<cvc5::Sort>(sort));
         }
 
-        auto tuple_sort = driver.slv->mkTupleSort( tmp_sort ) ;
+        auto tuple_sort = driver.tm->mkTupleSort( tmp_sort ) ;
         $$ = std::make_pair($1,tuple_sort);
 
     }
     else {
-      
+
       $$ = std::make_pair($1,sorts_for_tuple);
 
     }
@@ -658,21 +661,21 @@ member_init : "start" "for" "members" "is" basic_init "end" "start" {
       //      or ignore size mismatch and implement default
       //      initializer and notify user
 
-      
+
       std::vector<cvc5::Term> set_field_terms;
 
       // loop through member name to init vec
       for ( const auto&[mem_name,init_term] : $5 ) {
 
         // create update term
-        auto field_updater_term = 
+        auto field_updater_term =
             driver.members
                   .getSort()
                   .getDatatype()[acc::fields]
                   .getSelector(mem_name)
                   .getUpdaterTerm();
-        
-        auto restart_field_term = driver.slv->mkTerm(
+
+        auto restart_field_term = driver.tm->mkTerm(
             cvc5::Kind::APPLY_UPDATER,
             {field_updater_term,
               driver.members,
@@ -682,12 +685,12 @@ member_init : "start" "for" "members" "is" basic_init "end" "start" {
         set_field_terms.push_back(restart_field_term);
       }
       // make restart function
-      auto member_restart_sort = driver.slv->mkFunctionSort(
+      auto member_restart_sort = driver.tm->mkFunctionSort(
           {driver.members.getSort()},
           driver.members.getSort()
       );
 
-      auto member_restart_fn = driver.slv->mkConst(
+      auto member_restart_fn = driver.tm->mkConst(
           member_restart_sort,
           "start_members"
       );
@@ -695,7 +698,7 @@ member_init : "start" "for" "members" "is" basic_init "end" "start" {
       //  apply function
       driver.module_fns["members"] = member_restart_fn;
 
-      auto apply_fn = driver.slv->mkTerm(
+      auto apply_fn = driver.tm->mkTerm(
           cvc5::Kind::APPLY_UF,
           {member_restart_fn, driver.members}
       );
@@ -704,8 +707,8 @@ member_init : "start" "for" "members" "is" basic_init "end" "start" {
       std::vector<cvc5::Term> set_all_members_term;
       for ( const auto& f_t : set_field_terms ) {
 
-        set_all_members_term.emplace_back( 
-          driver.slv->mkTerm(
+        set_all_members_term.emplace_back(
+          driver.tm->mkTerm(
             cvc5::Kind::EQUAL,
             { apply_fn, f_t }
           )
@@ -720,7 +723,7 @@ member_init : "start" "for" "members" "is" basic_init "end" "start" {
       }
       else {
           driver.slv->assertFormula(
-              driver.slv->mkTerm(
+              driver.tm->mkTerm(
                   cvc5::Kind::AND,
                   set_all_members_term
               )
@@ -777,7 +780,7 @@ zom_determining_exprs : %empty {
     if ( driver.p == phase3 ){
       $$ = {};
     }
-  }; 
+  };
   | zom_determining_exprs determining_exprs {
     if ( driver.p == phase3 ){
       $$ = $1;
@@ -807,7 +810,7 @@ wom_stmts : wom_stmts stmt {
   };
 
 
-quantifier 
+quantifier
   : "any" {
     if (driver.p == phase3) {
       $$ = std::make_pair(quant::any,0);
@@ -834,10 +837,10 @@ quantifier
     }
   };
 //TODO: add or equal to to at most or at least
-     
+
 stmt : if_stmt
      | selection_stmt "."
-     | assignment "." 
+     | assignment "."
 
 if_stmt : "if" expr "then" ":" wom_stmts zom_else_if zow_else "end" "if"
 zom_else_if : %empty | zom_else_if else_if
@@ -849,14 +852,32 @@ selection_stmt : "for" WORD "in" expr zow_filter
                | "for" "some" WORD "in" expr zow_filter
                | "for" "all" WORD "in" expr zow_filter
 zow_filter : %empty | filter
-filter : "such" "that" expr 
+filter : "such" "that" expr
 
-assignment : lhs_member "'" ":=" expr
+assignment : name_sel "'" ":=" expr {
+    if (driver.p == phase3) {
+        // $1 is selected member term
+        std::string mem_string = $1.toString();
+
+        auto updater_term = $1
+                            .getSort()
+                            .getDatatype()[acc::fields]
+                            .getSelector(mem_string)
+                            .getUpdaterTerm();
+        auto expression_to_apply = $4;
+
+        $$ = driver.tm->mkTerm(
+            cvc5::Kind::APPLY_UPDATER,
+            {updater_term, driver.members, expression_to_apply}
+        );
+
+    }
+}
 
 expr  : equality
       | expr "and" equality {
         if ( driver.p == phase3 ) {
-          $$ = driver.slv->mkTerm(
+          $$ = driver.tm->mkTerm(
             cvc5::Kind::AND,
             {$1,$3}
           );
@@ -864,7 +885,7 @@ expr  : equality
       }
       | expr "or" equality{
         if ( driver.p == phase3 ) {
-          $$ = driver.slv->mkTerm(
+          $$ = driver.tm->mkTerm(
             cvc5::Kind::OR,
             {$1,$3}
           );
@@ -872,7 +893,7 @@ expr  : equality
       }
       | expr "or-rather" equality{
         if ( driver.p == phase3 ) {
-          $$ = driver.slv->mkTerm(
+          $$ = driver.tm->mkTerm(
             cvc5::Kind::XOR,
             {$1,$3}
           );
@@ -880,7 +901,7 @@ expr  : equality
       }
       | "not" expr {
         if ( driver.p == phase3 ) {
-          $$ = driver.slv->mkTerm(
+          $$ = driver.tm->mkTerm(
             cvc5::Kind::NOT,
             {$2}
           );
@@ -890,7 +911,7 @@ expr  : equality
 equality  : set_opers
           | equality "equals" set_opers {
             if ( driver.p == phase3 ) {
-              $$ = driver.slv->mkTerm(
+              $$ = driver.tm->mkTerm(
                 cvc5::Kind::EQUAL,
                 {$1,$3}
               );
@@ -898,11 +919,11 @@ equality  : set_opers
           }
           | equality "not-equals" set_opers {
             if ( driver.p == phase3 ) {
-              auto equal = driver.slv->mkTerm(
+              auto equal = driver.tm->mkTerm(
                 cvc5::Kind::EQUAL,
                 {$1,$3}
               );
-              $$ = driver.slv->mkTerm(
+              $$ = driver.tm->mkTerm(
                 cvc5::Kind::NOT,
                 {equal}
               );
@@ -912,7 +933,7 @@ equality  : set_opers
 set_opers  : membership
            | set_opers "unions" membership {
               if ( driver.p == phase3 ) {
-                $$ = driver.slv->mkTerm(
+                $$ = driver.tm->mkTerm(
                   cvc5::Kind::SET_UNION,
                   {$1,$3}
                 );
@@ -920,7 +941,7 @@ set_opers  : membership
             }
            | set_opers "intersects" membership {
               if ( driver.p == phase3 ) {
-                $$ = driver.slv->mkTerm(
+                $$ = driver.tm->mkTerm(
                   cvc5::Kind::SET_INTER,
                   {$1,$3}
                 );
@@ -928,7 +949,7 @@ set_opers  : membership
             }
            | set_opers "differences" membership {
               if ( driver.p == phase3 ) {
-                $$ = driver.slv->mkTerm(
+                $$ = driver.tm->mkTerm(
                   cvc5::Kind::SET_MINUS,
                   {$1,$3}
                 );
@@ -936,7 +957,7 @@ set_opers  : membership
             }
            | set_opers "is-in" membership {
               if ( driver.p == phase3 ) {
-                $$ = driver.slv->mkTerm(
+                $$ = driver.tm->mkTerm(
                   cvc5::Kind::SET_MEMBER,
                   {$1,$3}
                 );
@@ -944,7 +965,7 @@ set_opers  : membership
             }
            | set_opers "is-subset" membership {
               if ( driver.p == phase3 ) {
-                $$ = driver.slv->mkTerm(
+                $$ = driver.tm->mkTerm(
                   cvc5::Kind::SET_SUBSET,
                   {$1,$3}
                 );
@@ -952,7 +973,7 @@ set_opers  : membership
             }
            | "compliments" set_opers {
               if ( driver.p == phase3 ) {
-                $$ = driver.slv->mkTerm(
+                $$ = driver.tm->mkTerm(
                   cvc5::Kind::SET_COMPLEMENT,
                   {$2}
                 );
@@ -965,8 +986,8 @@ membership  : arithmatic
 
                 bool has_or_equals = $3.value_or(false);
                 cvc5::Kind gtoe = has_or_equals ? cvc5::Kind::GEQ : cvc5::Kind::GT;
-               
-                $$ = driver.slv->mkTerm(
+
+                $$ = driver.tm->mkTerm(
                   gtoe, {$1,$4}
                 );
               }
@@ -976,30 +997,30 @@ membership  : arithmatic
 
                 bool has_or_equals = $3.value_or(false);
                 cvc5::Kind ltoe = has_or_equals ? cvc5::Kind::LEQ : cvc5::Kind::LT;
-               
-                $$ = driver.slv->mkTerm(
+
+                $$ = driver.tm->mkTerm(
                   ltoe, {$1,$4}
                 );
               }
             }
             | membership zow_is "between" range {
               if ( driver.p == phase3 ) {
-                
+
                 auto range = $4;
                 cvc5::Kind lower_kind = std::get<0>(range);
                 cvc5::Kind upper_kind = std::get<1>(range);
                 cvc5::Term lower_term = std::get<2>(range);
                 cvc5::Term upper_term = std::get<3>(range);
 
-                auto lower_range = driver.slv->mkTerm(
+                auto lower_range = driver.tm->mkTerm(
                   lower_kind, {$1,lower_term}
                 );
 
-                auto upper_range = driver.slv->mkTerm(
+                auto upper_range = driver.tm->mkTerm(
                   upper_kind, {$1,upper_term}
                 );
 
-                $$ = driver.slv->mkTerm(
+                $$ = driver.tm->mkTerm(
                   cvc5::Kind::AND,
                   { lower_range, upper_range }
                 );
@@ -1065,7 +1086,7 @@ range : arithmatic ".." arithmatic {
 arithmatic  : term
             | arithmatic "+" term {
               if (driver.p == phase3) {
-                $$ = driver.slv->mkTerm(
+                $$ = driver.tm->mkTerm(
                   cvc5::Kind::ADD,
                   {$1,$3}
                 );
@@ -1073,7 +1094,7 @@ arithmatic  : term
             }
             | arithmatic "-" term {
               if (driver.p == phase3) {
-                $$ = driver.slv->mkTerm(
+                $$ = driver.tm->mkTerm(
                   cvc5::Kind::SUB,
                   {$1,$3}
                 );
@@ -1081,7 +1102,7 @@ arithmatic  : term
             }
             | arithmatic "*" term {
               if (driver.p == phase3) {
-                $$ = driver.slv->mkTerm(
+                $$ = driver.tm->mkTerm(
                   cvc5::Kind::MULT,
                   {$1,$3}
                 );
@@ -1089,7 +1110,7 @@ arithmatic  : term
             }
             | arithmatic "/" term {
               if (driver.p == phase3) {
-                $$ = driver.slv->mkTerm(
+                $$ = driver.tm->mkTerm(
                   cvc5::Kind::INTS_DIVISION,
                   {$1,$3}
                 );
@@ -1099,17 +1120,17 @@ arithmatic  : term
 
 name_sel  : WORD {
 
-  if(driver.p == phase2) { 
+  if(driver.p == phase2 || driver.p == phase3) {
     std::string member_name{ $1 };
 
-    auto mem_sel = driver.members 
+    auto mem_sel = driver.members
                           .getSort()
                           .getDatatype()[acc::fields]
                           .getSelector(member_name)
-                          .getTerm(); 
+                          .getTerm();
 
-    
-    auto field_term = driver.slv->mkTerm(
+
+    auto field_term = driver.tm->mkTerm(
         cvc5::Kind::APPLY_SELECTOR,
         { mem_sel , driver.members }
     );
@@ -1117,20 +1138,20 @@ name_sel  : WORD {
     $$ = field_term;
   }
 
-}; 
+};
   | WORD wom_sel {
 
-    if(driver.p == phase2) {
-      
+    if(driver.p == phase2 || driver.p == phase3) {
+
       std::string member_name = std::string($1);
       std::vector<std::string> selectors_vec { $2 };
-      auto mem_sel = driver.members 
+      auto mem_sel = driver.members
                           .getSort()
                           .getDatatype()[acc::fields]
                           .getSelector(member_name)
                           .getTerm();
-      
-      auto field_term = driver.slv->mkTerm(
+
+      auto field_term = driver.tm->mkTerm(
           cvc5::Kind::APPLY_SELECTOR,
           { mem_sel, driver.members }
       );
@@ -1141,46 +1162,45 @@ name_sel  : WORD {
 
         std::string next_sel_name = selectors_vec[i] ;
 
-        curr_sel = curr_sel 
-                    .getSort() 
+        curr_sel = curr_sel
+                    .getSort()
                     .getDatatype()[acc::fields]
-                    .getSelector(next_sel_name) 
+                    .getSelector(next_sel_name)
                     .getTerm();
 
-        temp_term = driver.slv->mkTerm(
+        temp_term = driver.tm->mkTerm(
             cvc5::Kind::APPLY_SELECTOR,
             { curr_sel, temp_term }
         );
       }
 
       // vec is never empty via grammar rules
-      std::string field_to_sel { selectors_vec.back() }; 
+      std::string field_to_sel { selectors_vec.back() };
 
-      curr_sel = temp_term 
-                    .getSort() 
+      curr_sel = temp_term
+                    .getSort()
                     .getDatatype()[acc::fields]
-                    .getSelector(field_to_sel) 
+                    .getSelector(field_to_sel)
                     .getTerm();
 
-      field_term = driver.slv->mkTerm(
+      field_term = driver.tm->mkTerm(
           cvc5::Kind::APPLY_SELECTOR,
           { curr_sel, temp_term }
       );
-      
+
       $$ = field_term;
 
     };
 
 };
 
-lhs_member  : WORD | WORD wom_sel
 
 wom_sel : wom_sel "->" WORD {
     if(driver.p == phase2) {
       $$ = $1;
       $$.emplace_back($3);
     }
-  }      
+  }
   | "->" WORD {
     if(driver.p == phase2) {
       std::vector<std::string> t;
@@ -1192,7 +1212,7 @@ wom_sel : wom_sel "->" WORD {
 term  : atom
       | "(" expr ")" { if (driver.p == phase3) $$=$2; }
 
-structure : atom 
+structure : atom
 /*TODO: struct map*/
 /*
       | "{" wom_structure_row "}" {
@@ -1205,15 +1225,15 @@ structure_row : WORD ":" structure
 
 atom : INT {
   if(driver.p == phase2) {
-    $$ = driver.slv->mkInteger($1);
+    $$ = driver.tm->mkInteger($1);
   }
 }; | FLOAT {
   //TODO: float -> bitvector nonsense
 };
    | name_sel
    | tuple_val {}
-   | FALSE 
-   | TRUE 
+   | FALSE
+   | TRUE
    | enum_val {}
 
 enum_val : name_sel "<" WORD ">"

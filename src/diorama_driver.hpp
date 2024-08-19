@@ -38,13 +38,13 @@ public:
 
 
   // constrain solver fields
-  std::unique_ptr<cvc5::Solver>      slv;
+  std::unique_ptr<cvc5::Solver> slv;
   std::unique_ptr<cvc5::TermManager> tm;
-  
-  cvc5::Term members; 
+
+  cvc5::Term members;
 
   bool members_declared;
-  
+
 
   calcxx_driver();
   virtual ~calcxx_driver();
@@ -69,7 +69,7 @@ public:
   //auxillary & helper member
   std::queue<pair_string_rec> aux_string_rec_map;
 
-  
+
 };
 //access fields of records, for now
 //all of our fields are records, we use this constant
@@ -84,7 +84,7 @@ namespace acc {
 /*
 struct VecStrHash {
     std::size_t operator()(const std::vector<std::string>& v) const {
-        
+
         std::size_t hash1;
 
         for (const auto& s: v) {
@@ -101,4 +101,4 @@ struct VecStrHash {
 */
 
 
-#endif 
+#endif

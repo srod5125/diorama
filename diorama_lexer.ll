@@ -9,7 +9,7 @@
   #include "diorama_driver.hpp"
 
   #include <cvc5/cvc5.h>
-  
+
   #undef yywrap
   #define yywrap() 1
 
@@ -45,7 +45,7 @@ blank   [ \t]
 
 
 
-          
+
 "#"           return yy::calcxx_parser::make_H1(loc);
 "##"          return yy::calcxx_parser::make_H2(loc);
 "###"         return yy::calcxx_parser::make_H3(loc);
@@ -108,7 +108,7 @@ blank   [ \t]
 "is-subset"       return yy::calcxx_parser::make_ISSUB(loc);
 "compliments"     return yy::calcxx_parser::make_COMP(loc);
 "is-greater-than" return yy::calcxx_parser::make_ISGT(loc);
-"is-less-than"    return yy::calcxx_parser::make_ISLT(loc);  
+"is-less-than"    return yy::calcxx_parser::make_ISLT(loc);
 "between"         return yy::calcxx_parser::make_BTWN(loc);
 "or-equals"       return yy::calcxx_parser::make_XOR(loc);
 ".."              return yy::calcxx_parser::make_DOTDOT(loc);
@@ -118,11 +118,11 @@ blank   [ \t]
 "{"               return yy::calcxx_parser::make_LBRACE(loc);
 "}"               return yy::calcxx_parser::make_RBRACE(loc);
 "false"           {
-                    auto f = driver.slv->mkFalse();
+                    auto f = driver.tm->mkFalse();
                     return yy::calcxx_parser::make_FALSE(f,loc);
                   }
 "true"            {
-                    auto t = driver.slv->mkTrue();
+                    auto t = driver.tm->mkTrue();
                     return yy::calcxx_parser::make_TRUE(t,loc);
                   }
 
@@ -143,10 +143,10 @@ blank   [ \t]
   //return yy::calcxx_parser::make_FLOAT(f,loc);
   yy::calcxx_parser::make_FLOAT(loc);
 }
-  
-{word}  { 
+
+{word}  {
   //TODO: return word lowered
-  return yy::calcxx_parser::make_WORD(yytext, loc); 
+  return yy::calcxx_parser::make_WORD(yytext, loc);
 }
 
 .       { }
@@ -161,9 +161,9 @@ void calcxx_driver::scan_begin()
   yy_flex_debug = trace_scanning;
 
   if(this->file.empty() || this->file == "-"){
-    
+
     yyin = stdin;
- 
+
   }
   else if(!(yyin = fopen(this->file.c_str(), "r"))) {
 

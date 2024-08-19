@@ -23,10 +23,10 @@ sources :=  $(wildcard $(SRC_DIR)/*)
 # ./objs/main.o  \
 # ./objs/parser.o  \
 # ./objs/lexer.o \
-# ./objs/diorama_driver.o 
+# ./objs/diorama_driver.o
 
 
-.PHONY: clean all debug
+.PHONY: clean all debug temp
 .PRECIOUS: $(objects) $(OBJ_DIR)/%.o
 
 # helper function
@@ -39,7 +39,7 @@ $(SRC_DIR)/$(LEX_OUT): $(LEX_IN)
 
 $(SRC_DIR)/$(PARSE_OUT) : $(PARSE_IN)
 	$(call create_file,$@)
-	bison -o $(SRC_DIR)/$(PARSE_OUT) $(PARSE_IN) 
+	bison -o $(SRC_DIR)/$(PARSE_OUT) $(PARSE_IN)
 #         -Wcounterexamples
 
 # o files:
@@ -76,7 +76,7 @@ debug: $(sources) $(objects)
 		-l:libcvc5.so.1 \
 		-Wl,-rpath,/home/stephen/cvc5/build/src \
 		-o tb
-		
+
 clean:
 	find $(OBJ_DIR) -type f -delete && \
 	rm src/lexer.cpp src/parser.cpp src/parser.hpp
@@ -88,12 +88,14 @@ parse:
 
 temp:
 	clang++ temp/temp.cpp  \
-		-I./deps/cvc5 -L./deps/ \
-		-lcvc5 -lcvc5parser \
-		-o temp/a 
+		-I/home/stephen/cvc5/build/include \
+		-L/home/stephen/cvc5/build/src \
+		-l:libcvc5.so.1 \
+		-Wl,-rpath,/home/stephen/cvc5/build/src \
+		-o temp/a
 
 #TODO: when in release link with static library,
-#TODO: during dev, link with shared 
+#TODO: during dev, link with shared
 
 
 #TODO: touch .o file when one doesnt exists
@@ -104,5 +106,5 @@ temp:
 #bison -o src/parser.cpp diorama_parser.yy
 #clang++ --std=c++20 -c src/parser.cpp -o objs/parser.o
 #clang++ --std=c++20 -c src/diorama_driver.cpp -o objs/diorama_driver.o
-#clang++ --std=c++20 -c src/lexer.cpp -o objs/lexer.o 
-#clang++ --std=c++20 -c src/main.cpp -o objs/main.o 
+#clang++ --std=c++20 -c src/lexer.cpp -o objs/lexer.o
+#clang++ --std=c++20 -c src/main.cpp -o objs/main.o

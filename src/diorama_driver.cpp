@@ -2,6 +2,7 @@
 
 #include "diorama_driver.hpp"
 #include <cvc5/cvc5.h>
+#include <memory>
 
 calcxx_driver::calcxx_driver()
   : trace_scanning{false},
@@ -10,13 +11,15 @@ calcxx_driver::calcxx_driver()
     members_declared{false}
 {
   //logic options
-  this->slv = std::make_unique<cvc5::Solver>();
+  this->tm = std::make_unique<cvc5::TermManager>();
+  this->slv = std::make_unique<cvc5::Solver>(*this->tm);
+
   this->slv->setLogic("ALL");
   this->slv->setOption("produce-models", "true");
 
   //adding known sorts
-  this->string_sort_map["int"]  = this->slv->getIntegerSort();
-  this->string_sort_map["bool"] = this->slv->getBooleanSort();
+  this->string_sort_map["int"]  = this->tm->getIntegerSort();
+  this->string_sort_map["bool"] = this->tm->getBooleanSort();
 
 }
 
@@ -30,7 +33,7 @@ int calcxx_driver::parse(const std::string &f)
   scan_begin();
 
   yy::calcxx_parser parser(*this);
-  
+
   parser.set_debug_level(trace_parsing);
 
   int res = parser.parse();
