@@ -66,3 +66,8 @@ void calcxx_driver::error(const std::string &m)
     PHASE beyond_end = (PHASE)(end+1);
     assert(this->p != beyond_end);
  }
+
+
+void calcxx_driver::Compose_Function( const std::vector<cvc5::Term> & body_stmts  ) {
+
+}

@@ -41,7 +41,9 @@ public:
   std::unique_ptr<cvc5::Solver> slv;
   std::unique_ptr<cvc5::TermManager> tm;
 
-  cvc5::Term members;
+  cvc5::Term members_const;
+  cvc5::Term members_var;
+
 
   bool members_declared;
 
@@ -68,6 +70,8 @@ public:
 
   //auxillary & helper member
   std::queue<pair_string_rec> aux_string_rec_map;
+
+  void Compose_Function( const std::vector<cvc5::Term> & body_stmts  );
 
 
 };

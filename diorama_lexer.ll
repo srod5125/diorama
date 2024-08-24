@@ -81,6 +81,7 @@ blank   [ \t]
 "to"              return yy::calcxx_parser::make_TO(loc);
 "for"             return yy::calcxx_parser::make_FOR(loc);
 "rule"            return yy::calcxx_parser::make_RULE(loc);
+    /*consider adding the key word policy*/
 "or"              return yy::calcxx_parser::make_OR(loc);
 "when"            return yy::calcxx_parser::make_WHEN(loc);
 "then"            return yy::calcxx_parser::make_THEN(loc);

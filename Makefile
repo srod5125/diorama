@@ -87,12 +87,13 @@ parse:
 	$(CXX) $(CXXFLAGS) -c src/parser.cpp -o objs/parser.o
 
 temp:
-	clang++ temp/temp.cpp  \
+	clang++ $(CXXFLAGS) temp/temp.cpp  \
 		-I/home/stephen/cvc5/build/include \
 		-L/home/stephen/cvc5/build/src \
 		-l:libcvc5.so.1 \
 		-Wl,-rpath,/home/stephen/cvc5/build/src \
-		-o temp/a
+		-o temp/a \
+	&& temp/a
 
 #TODO: when in release link with static library,
 #TODO: during dev, link with shared

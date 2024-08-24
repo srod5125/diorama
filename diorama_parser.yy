@@ -15,6 +15,7 @@
   #include <variant>
   #include <vector>
   #include <unordered_map>
+  #include <map>
   #include <queue>
   #include <optional>
   #include <tuple>
@@ -51,7 +52,8 @@
     >;
   using pair_string_sort = std::pair<std::string,sort_or_aux>;
 
-  using record_map_aux = std::unordered_map<std::string,sort_or_aux>;
+  // we use map since insertions are odered
+  using record_map_aux = std::map<std::string,sort_or_aux>;
 
   using pair_string_term = std::pair<std::string,cvc5::Term>;
 
@@ -444,7 +446,10 @@ record_decl : "record" word_or_members "are" wom_decleration "end" "record" {
 
             if ( $2 == "members" ){
 
-              driver.members = driver.tm->mkConst(rec_sort,"members");
+              driver.members_const = driver.tm->mkConst(
+                rec_sort,
+                "members"
+              );
               driver.members_declared = true;
 
             }
@@ -648,46 +653,46 @@ wom_types  : wom_types "," WORD {
 
 either_in_or_is : "in" | "is"
 
-inits : zom_inits member_init
+inits : zom_inits members_init
 
 zom_inits : %empty | zom_inits init
 init : struct_init | array_init
-array_init  : "start" "for" WORD "is" array_map_init "end" "start"
-struct_init : "start" "for" WORD "is" basic_init "end" "start"
-member_init : "start" "for" "members" "is" basic_init "end" "start" {
+array_init   : "start" "for" WORD "is" array_map_init "end" "start"
+struct_init  : "start" "for" WORD "is" basic_init "end" "start"
+members_init : "start" "for" "members" "is" basic_init "end" "start" {
     if(driver.p == phase2) {
+
+      // we inititialize the members & create the restart for members
 
       //TODO: assert size of keys in init is size of mems
       //      or ignore size mismatch and implement default
       //      initializer and notify user
 
 
-      std::vector<cvc5::Term> set_field_terms;
+      std::vector<cvc5::Term> initalizing_terms;
+
+      initalizing_terms.push_back(
+        driver.members_const
+              .getSort()
+              .getDatatype()
+              .getConstructor(acc::fields)
+              .getTerm()
+      );
 
       // loop through member name to init vec
-      for ( const auto&[mem_name,init_term] : $5 ) {
-
-        // create update term
-        auto field_updater_term =
-            driver.members
-                  .getSort()
-                  .getDatatype()[acc::fields]
-                  .getSelector(mem_name)
-                  .getUpdaterTerm();
-
-        auto restart_field_term = driver.tm->mkTerm(
-            cvc5::Kind::APPLY_UPDATER,
-            {field_updater_term,
-              driver.members,
-              init_term}
-        );
-
-        set_field_terms.push_back(restart_field_term);
+      for ( const auto& [ _ , init_term ] : $5 ) {
+        initalizing_terms.push_back(init_term);
       }
+
+      driver.members_var = driver.tm->mkTerm(
+        cvc5::Kind::APPLY_CONSTRUCTOR,
+        initalizing_terms
+      );
+
       // make restart function
       auto member_restart_sort = driver.tm->mkFunctionSort(
-          {driver.members.getSort()},
-          driver.members.getSort()
+          {driver.members_const.getSort()},
+           driver.members_const.getSort()
       );
 
       auto member_restart_fn = driver.tm->mkConst(
@@ -695,40 +700,14 @@ member_init : "start" "for" "members" "is" basic_init "end" "start" {
           "start_members"
       );
 
-      //  apply function
       driver.module_fns["members"] = member_restart_fn;
-
+      //TODO: make restart function
+      /*
       auto apply_fn = driver.tm->mkTerm(
           cvc5::Kind::APPLY_UF,
-          {member_restart_fn, driver.members}
+          {member_restart_fn, driver.members_var}
       );
-
-      // build terms
-      std::vector<cvc5::Term> set_all_members_term;
-      for ( const auto& f_t : set_field_terms ) {
-
-        set_all_members_term.emplace_back(
-          driver.tm->mkTerm(
-            cvc5::Kind::EQUAL,
-            { apply_fn, f_t }
-          )
-        );
-
-      }
-
-      if ( set_all_members_term.size() == 1  ){
-          driver.slv->assertFormula(
-              set_all_members_term[0]
-          );
-      }
-      else {
-          driver.slv->assertFormula(
-              driver.tm->mkTerm(
-                  cvc5::Kind::AND,
-                  set_all_members_term
-              )
-          );
-      }
+      */
 
 
     }
@@ -793,7 +772,16 @@ determining_exprs : "-" expr "." {
     }
   }
 
-then_block : "then" ":" wom_stmts
+then_block : "then" ":" wom_stmts {
+    if (driver.p == phase3){
+
+        std::vector<cvc5::Term> then_funcs;
+
+
+
+    }
+}
+
 
 wom_stmts : wom_stmts stmt {
     if (driver.p == phase3) {
@@ -868,7 +856,7 @@ assignment : name_sel "'" ":=" expr {
 
         $$ = driver.tm->mkTerm(
             cvc5::Kind::APPLY_UPDATER,
-            {updater_term, driver.members, expression_to_apply}
+            {updater_term, driver.members_var, expression_to_apply}
         );
 
     }
@@ -1121,18 +1109,31 @@ arithmatic  : term
 name_sel  : WORD {
 
   if(driver.p == phase2 || driver.p == phase3) {
+
+    // (note 1)
+    // we initially have to use the const to perform selection
+    // before we initalize, in all other phases we will use the
+    // initialized members_var
+    cvc5::Term members;
+    if (driver.p == phase2) {
+        members = driver.members_const;
+    }
+    else if (driver.p == phase3) {
+        members = driver.members_var;
+    }
+
     std::string member_name{ $1 };
 
-    auto mem_sel = driver.members
-                          .getSort()
-                          .getDatatype()[acc::fields]
-                          .getSelector(member_name)
-                          .getTerm();
+    auto mem_sel = members
+                    .getSort()
+                    .getDatatype()[acc::fields]
+                    .getSelector(member_name)
+                    .getTerm();
 
 
     auto field_term = driver.tm->mkTerm(
         cvc5::Kind::APPLY_SELECTOR,
-        { mem_sel , driver.members }
+        { mem_sel , members }
     );
 
     $$ = field_term;
@@ -1143,17 +1144,26 @@ name_sel  : WORD {
 
     if(driver.p == phase2 || driver.p == phase3) {
 
+        // see note 1
+        cvc5::Term members;
+        if (driver.p == phase2) {
+            members = driver.members_const;
+        }
+        else if (driver.p == phase3) {
+            members = driver.members_var;
+        }
+
       std::string member_name = std::string($1);
       std::vector<std::string> selectors_vec { $2 };
-      auto mem_sel = driver.members
-                          .getSort()
-                          .getDatatype()[acc::fields]
-                          .getSelector(member_name)
-                          .getTerm();
+      auto mem_sel = members
+                        .getSort()
+                        .getDatatype()[acc::fields]
+                        .getSelector(member_name)
+                        .getTerm();
 
       auto field_term = driver.tm->mkTerm(
           cvc5::Kind::APPLY_SELECTOR,
-          { mem_sel, driver.members }
+          { mem_sel, members }
       );
 
       auto curr_sel    { mem_sel };    //cvc5 selector
