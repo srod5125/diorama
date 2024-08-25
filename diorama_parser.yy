@@ -207,7 +207,8 @@ RBRACE     "}"
 %type <std::vector<std::string>> wom_enums wom_types wom_sel
 %type <std::vector<pair_string_sort>> wom_decleration
 %type <std::vector<pair_string_term>> wom_word_to_structure_mapping basic_init
-%type <std::vector<cvc5::Term>> wom_stmts zom_determining_exprs
+%type <std::vector<cvc5::Term>> wom_stmts zom_determining_exprs then_block
+%type <cvc5::Term> when_block
 
 %type <cond_op_and_limit> quantifier
 %type <std::optional<cond_op_and_limit>> zow_quantifier
@@ -744,7 +745,94 @@ zow_word : %empty | WORD
 rule : "rule" zow_word "is" wom_when_blocks wom_then_blocks "end" "rule"
 wom_when_blocks : wom_when_blocks "or" when_block | when_block
 wom_then_blocks : wom_then_blocks "or" then_block | then_block
-when_block : "when" zow_quantifier ":" zom_determining_exprs
+
+when_block : "when" zow_quantifier ":" zom_determining_exprs {
+    if (driver.p == phase3) {
+
+        int num_of_qualifications_needed = 0;
+        auto qualifier = quant::always;
+
+        if ($2.has_value()) {
+            qualifier = $2.value().first;
+            num_of_qualifications_needed = $2.value().second;
+        }
+
+        switch (qualifier)
+        {
+            case quant::any :{
+                $$ = driver.tm->mkTerm(
+                    cvc5::Kind::OR, $4
+                );
+            };
+            break;
+            case quant::all :{
+                $$ = driver.tm->mkTerm(
+                    cvc5::Kind::AND, $4
+                );
+            };
+            break;
+            case quant::at_least :{
+               std::vector<cvc5::Term> count_of_qualifiying_expressions;
+
+                for ( const auto& cond_expr: $4 ){
+                    count_of_qualifiying_expressions.emplace_back(
+                        driver.tm->mkTerm(
+                            cvc5::Kind::ITE,
+                            {cond_expr,
+                             driver.tm->mkInteger(1),
+                             driver.tm->mkInteger(0)}
+                        )
+                    );
+                }
+
+                $$ = driver.tm->mkTerm(
+                    cvc5::Kind::GT,
+                    { driver.tm->mkInteger(num_of_qualifications_needed),
+                      driver.tm->mkTerm(
+                        cvc5::Kind::ADD,
+                        count_of_qualifiying_expressions
+                      )
+                    }
+                );
+            };
+            break;
+            case quant::at_most :{
+                std::vector<cvc5::Term> count_of_qualifiying_expressions;
+
+                for ( const auto& cond_expr: $4 ){
+                    count_of_qualifiying_expressions.emplace_back(
+                        driver.tm->mkTerm(
+                            cvc5::Kind::ITE,
+                            {cond_expr,
+                             driver.tm->mkInteger(1),
+                             driver.tm->mkInteger(0)}
+                        )
+                    );
+                }
+
+                $$ = driver.tm->mkTerm(
+                    cvc5::Kind::LT,
+                    { driver.tm->mkInteger(num_of_qualifications_needed),
+                      driver.tm->mkTerm(
+                        cvc5::Kind::ADD,
+                        count_of_qualifiying_expressions
+                      )
+                    }
+                );
+
+            };
+            break;
+            case quant::always :{
+                $$ = driver.tm->mkTrue();
+            };
+            break;
+
+            default:  break;
+        }
+
+    }
+}
+
 zow_quantifier : %empty {
     if (driver.p == phase3){
       $$ = std::nullopt;
@@ -757,7 +845,8 @@ zow_quantifier : %empty {
   };
 zom_determining_exprs : %empty {
     if ( driver.p == phase3 ){
-      $$ = {};
+        std::vector<cvc5::Term> t;
+        $$ = t;
     }
   };
   | zom_determining_exprs determining_exprs {
@@ -777,7 +866,61 @@ then_block : "then" ":" wom_stmts {
 
         std::vector<cvc5::Term> then_funcs;
 
+        // f(member) -> member
+        auto member_to_member = driver.tm->mkFunctionSort(
+            { driver.members_const.getSort() },
+            driver.members_const.getSort()
+        );
 
+        // g(  f(member) -> member   ) -> bool
+        auto member_to_bool = driver.tm->mkFunctionSort(
+            { member_to_member },
+            driver.tm->getBooleanSort()
+        );
+
+        for ( const auto & stmt : $3 ){
+
+            auto func_mem_to_mem = driver.tm->mkConst(
+                member_to_member,
+                ( "f_" + std::to_string(driver.stmt_count) )
+            );
+            driver.stmt_count += 1;
+
+
+            auto apply_stmt = driver.tm->mkTerm(
+                cvc5::Kind::APPLY_UF,
+                { func_mem_to_mem , driver.members_var }
+            );
+
+            driver.slv->assertFormula(
+                driver.tm->mkTerm(
+                    cvc5::Kind::EQUAL,
+                    { apply_stmt , stmt }
+                )
+            );
+
+            auto func_mem_to_bool = driver.tm->mkConst(
+                member_to_bool,
+                ( "f_" + std::to_string(driver.stmt_count) )
+            );
+            driver.stmt_count += 1;
+
+            auto return_bool = driver.tm->mkTerm(
+                cvc5::Kind::APPLY_UF,
+                { func_mem_to_bool , func_mem_to_mem }
+            );
+
+            driver.slv->assertFormula(
+                driver.tm->mkTerm(
+                    cvc5::Kind::EQUAL,
+                    { return_bool , driver.tm->mkTrue() }
+                )
+            );
+
+            then_funcs.emplace_back(return_bool);
+        }
+
+        $$ = then_funcs;
 
     }
 }

@@ -46,6 +46,9 @@ public:
 
 
   bool members_declared;
+  // used to declare stmts
+  // TODO: research if functions must have unique names
+  int stmt_count;
 
 
   calcxx_driver();
