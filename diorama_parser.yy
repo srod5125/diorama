@@ -207,8 +207,11 @@ RBRACE     "}"
 %type <std::vector<std::string>> wom_enums wom_types wom_sel
 %type <std::vector<pair_string_sort>> wom_decleration
 %type <std::vector<pair_string_term>> wom_word_to_structure_mapping basic_init
-%type <std::vector<cvc5::Term>> wom_stmts zom_determining_exprs then_block
+%type <std::vector<cvc5::Term>> wom_stmts zom_determining_exprs wom_when_blocks
+%type <std::vector<std::vector<cvc5::Term>>> wom_then_blocks
+%type <std::vector<cvc5::Term>> then_block
 %type <cvc5::Term> when_block
+
 
 %type <cond_op_and_limit> quantifier
 %type <std::optional<cond_op_and_limit>> zow_quantifier
@@ -220,6 +223,7 @@ RBRACE     "}"
 %printer { yyoutput << "todo"; } <std::vector<pair_string_term>>;
 %printer { yyoutput << "todo"; } <std::vector<std::string>>;
 %printer { yyoutput << "todo"; } <std::vector<cvc5::Term>>;
+%printer { yyoutput << "todo"; } <std::vector<std::vector<cvc5::Term>>>;
 %printer { yyoutput << "todo"; } <pair_string_term>;
 %printer { yyoutput << "todo"; } <std::optional<bool>>;
 %printer { yyoutput << "todo"; } <std::optional<cond_op_and_limit>>;
@@ -743,8 +747,31 @@ word_to_structure :  WORD ":=" structure {
 zom_rules : %empty | zom_rules rule
 zow_word : %empty | WORD
 rule : "rule" zow_word "is" wom_when_blocks wom_then_blocks "end" "rule"
-wom_when_blocks : wom_when_blocks "or" when_block | when_block
-wom_then_blocks : wom_then_blocks "or" then_block | then_block
+wom_when_blocks : wom_when_blocks "or" when_block {
+    if (driver.p == phase3){
+        $$ = $1;
+        $$.push_back($3);
+    }
+}
+    | when_block {
+    if (driver.p == phase3){
+        std::vector<cvc5::Term> t;
+        t.push_back($1);
+        $$ = t;
+    }
+}
+wom_then_blocks : wom_then_blocks "or" then_block {
+    if (driver.p == phase3){
+        $$ = $1;
+        $$.emplace_back($3);
+    }
+}   | then_block {
+    if (driver.p == phase3){
+        std::vector<std::vector<cvc5::Term>> t;
+        t.emplace_back($1);
+        $$ = t;
+    }
+}
 
 when_block : "when" zow_quantifier ":" zom_determining_exprs {
     if (driver.p == phase3) {
