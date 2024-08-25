@@ -9,7 +9,8 @@ calcxx_driver::calcxx_driver()
     trace_parsing{false},
     p{phase1},
     members_declared{false},
-    stmt_count{0}
+    stmt_count{0},
+    rule_count{0}
 {
   //logic options
   this->tm = std::make_unique<cvc5::TermManager>();

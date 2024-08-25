@@ -49,6 +49,7 @@ public:
   // used to declare stmts
   // TODO: research if functions must have unique names
   int stmt_count;
+  int rule_count;
 
 
   calcxx_driver();

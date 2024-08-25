@@ -217,6 +217,7 @@ RBRACE     "}"
 %type <std::optional<cond_op_and_limit>> zow_quantifier
 %type <std::optional<bool>> zow_or_equals
 %type <std::string> word_or_members
+%type <std::optional<std::string>> zow_word
 
 %printer { yyoutput << "todo"; } <cvc5::Term>;
 %printer { yyoutput << "todo"; } <std::vector<pair_string_sort>>;
@@ -228,6 +229,7 @@ RBRACE     "}"
 %printer { yyoutput << "todo"; } <std::optional<bool>>;
 %printer { yyoutput << "todo"; } <std::optional<cond_op_and_limit>>;
 %printer { yyoutput << "todo"; } <range_type>;
+%printer { yyoutput << "todo"; } <std::optional<std::string>>;
 %printer { yyoutput << "todo"; } <cond_op_and_limit>;
 %printer { yyoutput << "todo"; } <pair_string_sort>;
 %printer { yyoutput << $$; } <*>;
@@ -745,8 +747,97 @@ word_to_structure :  WORD ":=" structure {
 
 
 zom_rules : %empty | zom_rules rule
-zow_word : %empty | WORD
-rule : "rule" zow_word "is" wom_when_blocks wom_then_blocks "end" "rule"
+zow_word : %empty {
+    if (driver.p == phase3){
+        $$ = std::nullopt;
+    }
+}
+    | WORD {
+    if (driver.p == phase3){
+        $$ = $1;
+    }
+}
+rule : "rule" zow_word "is" wom_when_blocks wom_then_blocks "end" "rule" {
+    if (driver.p == phase3){
+
+        std::string trigger_name;
+        if ( $2.has_value() ) {
+            trigger_name = $2.value();
+        }
+        else {
+            trigger_name = "rule_" + std::to_string(driver.rule_count);
+            driver.rule_count += 1;
+        }
+
+        auto trigger_rule = driver.tm->mkConst(
+            driver.tm->getBooleanSort(),
+            trigger_name
+        );
+
+        // or all when blocks & set equal to trigger
+        auto triggers =  driver.tm->mkTerm(
+            cvc5::Kind::EQUAL,
+            {
+                trigger_rule,
+                driver.tm->mkTerm(
+                    cvc5::Kind::OR, $4
+                )
+            }
+        );
+        driver.slv->assertFormula(triggers);
+
+        if ( $5.size() == 1 ) {
+
+            for ( const auto& thens : $5[0] ){
+                auto imply_rule = driver.tm->mkTerm(
+                    cvc5::Kind::IMPLIES,
+                    { trigger_rule , thens }
+                );
+                driver.slv->assertFormula(imply_rule);
+            }
+
+        }
+        else {
+            std::vector<cvc5::Term> multiplex_triggers;
+
+            for ( std::size_t i = 0; i < $5.size(); i+=1 ) {
+
+                auto multiplexed_trigger =  driver.tm->mkConst(
+                    driver.tm->getBooleanSort(),
+                    ("mult_" + std::to_string(i))
+                );
+
+                auto imply_trigger = driver.tm->mkTerm(
+                    cvc5::Kind::IMPLIES,
+                    { trigger_rule, multiplexed_trigger}
+                );
+                driver.slv->assertFormula(imply_trigger);
+
+                for ( const auto& thens : $5[i] ) {
+
+                    auto imply_rule = driver.tm->mkTerm(
+                        cvc5::Kind::IMPLIES,
+                        { multiplexed_trigger , thens }
+                    );
+                    driver.slv->assertFormula(imply_rule);
+
+                }
+
+                multiplex_triggers.push_back(multiplexed_trigger);
+            }
+
+            driver.slv->assertFormula(
+                driver.tm->mkTerm(
+                    cvc5::Kind::XOR,
+                    multiplex_triggers
+                )
+            );
+
+        }
+
+    }
+}
+
 wom_when_blocks : wom_when_blocks "or" when_block {
     if (driver.p == phase3){
         $$ = $1;
