@@ -17,7 +17,7 @@ int main(int argc, char **argv)
     }
     else if (argv[1] == std::string("-s")) {
       driver.trace_scanning = true;
-    } 
+    }
 
 
   }
@@ -27,12 +27,14 @@ int main(int argc, char **argv)
     for ( ; driver.p != end ; driver.next_phase() ) {
 
       driver.parse(argv[1]);
-    
+
     }
 
   }
   else {
     std::cout << "too little or too many args" << std::endl;
+    std::cout << "args given: " << argc << std::endl;
+
   }
 
   //std::cout << "res: " << driver.slv.checkSat() << std::endl;

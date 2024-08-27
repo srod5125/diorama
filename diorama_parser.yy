@@ -178,9 +178,9 @@ RBRACE     "}"
 %token <cvc5::Term> TRUE
 %token FLOAT
 
-%type <cvc5::Term> name_sel
 %type <cvc5::Term> tuple_val
 %type <cvc5::Term> enum_val
+%type <cvc5::Term> lhs_name_sel rhs_name_sel
 
 %type <cvc5::Term> atom term structure expr
 %type <cvc5::Term> equality
@@ -1103,16 +1103,11 @@ selection_stmt : "for" WORD "in" expr zow_filter
 zow_filter : %empty | filter
 filter : "such" "that" expr
 
-assignment : name_sel "'" ":=" expr {
+assignment : lhs_name_sel "'" ":=" expr {
     if (driver.p == phase3) {
-        // $1 is selected member term
-        std::string mem_string = $1.toString();
 
-        auto updater_term = $1
-                            .getSort()
-                            .getDatatype()[acc::fields]
-                            .getSelector(mem_string)
-                            .getUpdaterTerm();
+        auto updater_term = $1;
+
         auto expression_to_apply = $4;
 
         $$ = driver.tm->mkTerm(
@@ -1367,7 +1362,7 @@ arithmatic  : term
             }
 
 
-name_sel  : WORD {
+rhs_name_sel  : WORD {
 
   if(driver.p == phase2 || driver.p == phase3) {
 
@@ -1466,21 +1461,101 @@ name_sel  : WORD {
 };
 
 
+
+lhs_name_sel  : WORD {
+
+  if(driver.p == phase3) {
+
+    std::string member_name{ $1 };
+
+    auto mem_sel_updater = driver.members_const
+                          .getSort()
+                          .getDatatype()[acc::fields]
+                          .getSelector(member_name)
+                          .getUpdaterTerm();
+
+    $$ = mem_sel_updater;
+  }
+
+};
+  | WORD wom_sel {
+
+    if(driver.p == phase2 || driver.p == phase3) {
+
+        // see note 1
+        cvc5::Term members;
+        if (driver.p == phase2) {
+            members = driver.members_const;
+        }
+        else if (driver.p == phase3) {
+            members = driver.members_var;
+        }
+
+      std::string member_name = std::string($1);
+      std::vector<std::string> selectors_vec { $2 };
+      auto mem_sel = members
+                        .getSort()
+                        .getDatatype()[acc::fields]
+                        .getSelector(member_name)
+                        .getTerm();
+
+      auto field_term = driver.tm->mkTerm(
+          cvc5::Kind::APPLY_SELECTOR,
+          { mem_sel, members }
+      );
+
+      auto curr_sel    { mem_sel };    //cvc5 selector
+      auto temp_term   { field_term }; //cvc5 term
+      for ( std::size_t i = 1; i < selectors_vec.size() ; i+= 1 ) {
+
+        std::string next_sel_name = selectors_vec[i] ;
+
+        curr_sel = curr_sel
+                    .getSort()
+                    .getDatatype()[acc::fields]
+                    .getSelector(next_sel_name)
+                    .getTerm();
+
+        temp_term = driver.tm->mkTerm(
+            cvc5::Kind::APPLY_SELECTOR,
+            { curr_sel, temp_term }
+        );
+      }
+
+      // vec is never empty via grammar rules
+      std::string field_to_sel { selectors_vec.back() };
+
+      auto curr_sel_updater = temp_term
+                              .getSort()
+                              .getDatatype()[acc::fields]
+                              .getSelector(field_to_sel)
+                              .getUpdaterTerm();
+
+
+      $$ = curr_sel_updater;
+
+    };
+
+};
+
+
+
+
 wom_sel : wom_sel "->" WORD {
-    if(driver.p == phase2) {
+    if(driver.p == phase2 || driver.p == phase3) {
       $$ = $1;
       $$.emplace_back($3);
     }
   }
   | "->" WORD {
-    if(driver.p == phase2) {
+    if(driver.p == phase2 || driver.p == phase3) {
       std::vector<std::string> t;
       t.emplace_back($2);
       $$ = t;
     }
   }
 
-term  : atom
+term  : atom { if (driver.p == phase3) $$=$1; }
       | "(" expr ")" { if (driver.p == phase3) $$=$2; }
 
 structure : atom
@@ -1495,19 +1570,19 @@ structure_row : WORD ":" structure
 */
 
 atom : INT {
-  if(driver.p == phase2) {
+  if(driver.p == phase2 || driver.p == phase3) {
     $$ = driver.tm->mkInteger($1);
   }
 }; | FLOAT {
   //TODO: float -> bitvector nonsense
 };
-   | name_sel
+   | rhs_name_sel
    | tuple_val {}
    | FALSE
    | TRUE
    | enum_val {}
 
-enum_val : name_sel "<" WORD ">"
+enum_val : rhs_name_sel "<" WORD ">"
 tuple_val : "(" wom_atom  ")"
 wom_atom : wom_atom "," atom | atom
 
