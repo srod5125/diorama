@@ -775,15 +775,26 @@ rule : "rule" zow_word "is" wom_when_blocks wom_then_blocks "end" "rule" {
         );
 
         // or all when blocks & set equal to trigger
-        auto triggers =  driver.tm->mkTerm(
-            cvc5::Kind::EQUAL,
-            {
-                trigger_rule,
-                driver.tm->mkTerm(
-                    cvc5::Kind::OR, $4
-                )
-            }
-        );
+        cvc5::Term triggers;
+
+        if ( $4.size() == 1 ) {
+            triggers = driver.tm->mkTerm(
+                cvc5::Kind::AND,
+                { $4[0] , driver.tm->mkTrue() }
+            );
+        }
+        else {
+            triggers =  driver.tm->mkTerm(
+                cvc5::Kind::EQUAL,
+                {
+                    trigger_rule,
+                    driver.tm->mkTerm(
+                        cvc5::Kind::OR, $4
+                    )
+                }
+            );
+        }
+
         driver.slv->assertFormula(triggers);
 
         if ( $5.size() == 1 ) {
