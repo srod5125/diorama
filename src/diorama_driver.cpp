@@ -16,8 +16,10 @@ calcxx_driver::calcxx_driver()
   this->tm = std::make_unique<cvc5::TermManager>();
   this->slv = std::make_unique<cvc5::Solver>(*this->tm);
 
-  this->slv->setLogic("ALL");
+  this->slv->setLogic("HO_ALL");
   this->slv->setOption("produce-models", "true");
+  this->slv->setOption("output", "incomplete");
+
 
   //adding known sorts
   this->string_sort_map["int"]  = this->tm->getIntegerSort();

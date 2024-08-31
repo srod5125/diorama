@@ -238,7 +238,37 @@ RBRACE     "}"
 
 %%
 
-spec : module
+spec : module {
+
+    if ( driver.p == phase4 ){
+
+        auto x_sel = driver.members_var
+                        .getSort()
+                        .getDatatype()[acc::fields]
+                        .getSelector("x")
+                        .getTerm();
+
+
+        auto x_var = driver.tm->mkTerm(
+            cvc5::Kind::APPLY_SELECTOR,
+            { x_sel , driver.members_var }
+        );
+
+        driver.slv->assertFormula(
+
+            driver.tm->mkTerm(
+                cvc5::Kind::EQUAL,
+                { x_var , driver.tm->mkInteger(3) }
+            )
+
+        );
+
+        auto res = driver.slv->checkSat();
+
+        std::cout << "after module: " << res << std::endl;
+    }
+
+}
 
 module :  "module" WORD "is" data body "end" WORD {
     if (driver.p == phase1) {
@@ -397,7 +427,6 @@ module :  "module" WORD "is" data body "end" WORD {
 
       }
       */
-
 
     }
 };
@@ -1015,7 +1044,6 @@ then_block : "then" ":" wom_stmts {
             );
             driver.stmt_count += 1;
 
-
             auto apply_stmt = driver.tm->mkTerm(
                 cvc5::Kind::APPLY_UF,
                 { func_mem_to_mem , driver.members_var }
@@ -1030,12 +1058,12 @@ then_block : "then" ":" wom_stmts {
 
             auto func_mem_to_bool = driver.tm->mkConst(
                 member_to_bool,
-                ( "f_" + std::to_string(driver.stmt_count) )
+                ( "ho_f" + std::to_string(driver.stmt_count) )
             );
             driver.stmt_count += 1;
 
             auto return_bool = driver.tm->mkTerm(
-                cvc5::Kind::APPLY_UF,
+                cvc5::Kind::HO_APPLY,
                 { func_mem_to_bool , func_mem_to_mem }
             );
 
