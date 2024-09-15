@@ -19,14 +19,13 @@
   #include <queue>
   #include <optional>
   #include <tuple>
-  #include <cvc5/cvc5.h>
 
 
   //since the parser is the root dependency
   //any global aliases are better placed here
 
   using pair_of_strings = std::pair<std::string,std::string>;
-  using sort_or_string = std::variant<cvc5::Sort,std::string>;
+  using sort_or_string = std::variant<int,std::string>;
 
 
   struct SortString {
@@ -47,15 +46,14 @@
       SortString,
       SetString,
       pair_of_strings,
-      std::vector<sort_or_string>,
-      cvc5::Sort
+      std::vector<sort_or_string>
     >;
   using pair_string_sort = std::pair<std::string,sort_or_aux>;
 
   // we use map since insertions are odered
   using record_map_aux = std::map<std::string,sort_or_aux>;
 
-  using pair_string_term = std::pair<std::string,cvc5::Term>;
+  using pair_string_term = std::pair<std::string,int>;
 
   using pair_string_rec = std::pair<std::string,record_map_aux>;
 
@@ -68,8 +66,8 @@
   using cond_op_and_limit = std::pair<quant,int>;
 
   using range_type = std::tuple<
-    cvc5::Kind,cvc5::Kind,
-    cvc5::Term,cvc5::Term
+    int,int,
+    int,int
   >;
 
 }
@@ -174,64 +172,9 @@ RBRACE     "}"
 
 %token <std::string> WORD
 %token <int> INT
-%token <cvc5::Term> FALSE
-%token <cvc5::Term> TRUE
+%token <bool> FALSE TRUE
 %token FLOAT
 
-%type <cvc5::Term> tuple_val
-%type <cvc5::Term> enum_val
-%type <cvc5::Term> lhs_name_sel rhs_name_sel
-
-%type <cvc5::Term> atom term structure expr
-%type <cvc5::Term> equality
-%type <cvc5::Term> set_opers
-%type <cvc5::Term> membership
-%type <cvc5::Term> arithmatic
-%type <cvc5::Term> determining_exprs
-%type <cvc5::Term> stmt
-%type <cvc5::Term> if_stmt
-%type <cvc5::Term> selection_stmt
-%type <cvc5::Term> assignment
-
-%type <range_type> range
-
-%type <pair_string_sort> declaration
-%type <pair_string_sort> named_decl
-%type <pair_string_sort> set_decl
-%type <pair_string_sort> array_decl
-%type <pair_string_sort> tuple_decl
-%type <pair_string_sort> enum_decl
-
-%type <pair_string_term> word_to_structure
-
-%type <std::vector<std::string>> wom_enums wom_types wom_sel
-%type <std::vector<pair_string_sort>> wom_decleration
-%type <std::vector<pair_string_term>> wom_word_to_structure_mapping basic_init
-%type <std::vector<cvc5::Term>> wom_stmts zom_determining_exprs wom_when_blocks
-%type <std::vector<std::vector<cvc5::Term>>> wom_then_blocks
-%type <std::vector<cvc5::Term>> then_block
-%type <cvc5::Term> when_block
-
-
-%type <cond_op_and_limit> quantifier
-%type <std::optional<cond_op_and_limit>> zow_quantifier
-%type <std::optional<bool>> zow_or_equals
-%type <std::string> word_or_members
-%type <std::optional<std::string>> zow_word
-
-%printer { yyoutput << "todo"; } <cvc5::Term>;
-%printer { yyoutput << "todo"; } <std::vector<pair_string_sort>>;
-%printer { yyoutput << "todo"; } <std::vector<pair_string_term>>;
-%printer { yyoutput << "todo"; } <std::vector<std::string>>;
-%printer { yyoutput << "todo"; } <std::vector<cvc5::Term>>;
-%printer { yyoutput << "todo"; } <std::vector<std::vector<cvc5::Term>>>;
-%printer { yyoutput << "todo"; } <pair_string_term>;
-%printer { yyoutput << "todo"; } <std::optional<bool>>;
-%printer { yyoutput << "todo"; } <std::optional<cond_op_and_limit>>;
-%printer { yyoutput << "todo"; } <range_type>;
-%printer { yyoutput << "todo"; } <std::optional<std::string>>;
-%printer { yyoutput << "todo"; } <cond_op_and_limit>;
-%printer { yyoutput << "todo"; } <pair_string_sort>;
 %printer { yyoutput << $$; } <*>;
 
 %start spec

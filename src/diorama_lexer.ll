@@ -119,12 +119,10 @@ blank   [ \t]
 "{"               return yy::calcxx_parser::make_LBRACE(loc);
 "}"               return yy::calcxx_parser::make_RBRACE(loc);
 "false"           {
-                    auto f = driver.tm->mkFalse();
-                    return yy::calcxx_parser::make_FALSE(f,loc);
+                    return yy::calcxx_parser::make_FALSE(false,loc);
                   }
 "true"            {
-                    auto t = driver.tm->mkTrue();
-                    return yy::calcxx_parser::make_TRUE(t,loc);
+                    return yy::calcxx_parser::make_TRUE(true,loc);
                   }
 
 

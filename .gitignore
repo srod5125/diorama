@@ -32,6 +32,9 @@ test_input.txt
 
 tb
 
+build
+build/*
+
 
 temp
 temp/*

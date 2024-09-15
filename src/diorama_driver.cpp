@@ -1,8 +1,8 @@
 #include <assert.h>
-
-#include "diorama_driver.hpp"
-#include <cvc5/cvc5.h>
+#include <iostream>
 #include <memory>
+#include "diorama_driver.hpp"
+//#include <cvc5/cvc5.h>
 
 calcxx_driver::calcxx_driver()
   : trace_scanning{false},
@@ -13,17 +13,17 @@ calcxx_driver::calcxx_driver()
     rule_count{0}
 {
   //logic options
-  this->tm = std::make_unique<cvc5::TermManager>();
-  this->slv = std::make_unique<cvc5::Solver>(*this->tm);
+  // this->tm = std::make_unique<cvc5::TermManager>();
+  // this->slv = std::make_unique<cvc5::Solver>(*this->tm);
 
-  this->slv->setLogic("HO_ALL");
-  this->slv->setOption("produce-models", "true");
-  this->slv->setOption("output", "incomplete");
+  // this->slv->setLogic("HO_ALL");
+  // this->slv->setOption("produce-models", "true");
+  // this->slv->setOption("output", "incomplete");
 
 
   //adding known sorts
-  this->string_sort_map["int"]  = this->tm->getIntegerSort();
-  this->string_sort_map["bool"] = this->tm->getBooleanSort();
+  // this->string_sort_map["int"]  = this->tm->getIntegerSort();
+  // this->string_sort_map["bool"] = this->tm->getBooleanSort();
 
 }
 
@@ -70,8 +70,3 @@ void calcxx_driver::error(const std::string &m)
     PHASE beyond_end = (PHASE)(end+1);
     assert(this->p != beyond_end);
  }
-
-
-void calcxx_driver::Compose_Function( const std::vector<cvc5::Term> & body_stmts  ) {
-
-}

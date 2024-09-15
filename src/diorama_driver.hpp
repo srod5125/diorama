@@ -2,11 +2,10 @@
 #include <string>
 #include <unordered_map>
 #include <memory>
-#include <variant>
 #include <vector>
 
 #include "parser.hpp"
-#include <cvc5/cvc5.h>
+//#include <cvc5/cvc5.h>
 
 #ifndef CALCXX_DRIVER_HPP
 #define CALCXX_DRIVER_HPP
@@ -39,11 +38,11 @@ public:
 
 
   // constrain solver fields
-  std::unique_ptr<cvc5::Solver> slv;
-  std::unique_ptr<cvc5::TermManager> tm;
+  // std::unique_ptr<cvc5::Solver> slv;
+  // std::unique_ptr<cvc5::TermManager> tm;
 
-  cvc5::Term members_const;
-  cvc5::Term members_var;
+  // cvc5::Term members_const;
+  // cvc5::Term members_var;
 
 
   bool members_declared;
@@ -66,17 +65,14 @@ public:
 
 
   // known sort into
-  std::unordered_map<std::string,cvc5::Sort>  string_sort_map;
-
-  std::unordered_map<std::string,cvc5::Term> module_fns;
+  // std::unordered_map<std::string,cvc5::Sort>  string_sort_map;
+  // std::unordered_map<std::string,cvc5::Term> module_fns;
 
   //TODO: struct map
   //std::unordered_map<std::vector<std::string>,std::string> record_members_map;
 
   //auxillary & helper member
   std::queue<pair_string_rec> aux_string_rec_map;
-
-  void Compose_Function( const std::vector<cvc5::Term> & body_stmts  );
 
 
 };
