@@ -138,8 +138,11 @@ RBRACE     "}"
 
 %type <Node> stmt wom_stmts
 %type <Node> if_stmt selection_stmt assignment
+%type <std::optional<Node>> zom_else_if zow_else
+%type <Node> else_if else
 
-%printer { yyoutput << "todo"; } <Node>;
+%printer { yyoutput << "todo opt"; } <std::optional<Node>>;
+%printer { yyoutput << $$.id << "todo tos"; } <Node>;
 %printer { yyoutput << $$; } <*>;
 
 %start spec
@@ -272,12 +275,41 @@ if_stmt : "if" expr "then" wom_stmts zom_else_if zow_else "end" "if" {
 
     int last_node_id = get_final_chain_id( if_start.id , driver.program_structure );
 
+    auto else_ifs = $5;
+    if ( else_ifs.has_value() ) {
+        chain( driver.program_structure, last_node_id, else_ifs.value() );
+        last_node_id = get_final_chain_id( last_node_id , driver.program_structure );
+    }
+    auto else_stmt = $6;
+    if ( else_stmt.has_value() ) {
+        chain( driver.program_structure, last_node_id, else_stmt.value() );
+        last_node_id = get_final_chain_id( last_node_id , driver.program_structure );
+    }
 
+    chain( driver.program_structure, last_node_id, if_end );
+    if_start.tos.push_back( if_end.id );
+
+    $$ = if_start;
 }
-zom_else_if : %empty | zom_else_if else_if
-else_if : "else" "if" expr "then" ":" wom_stmts
-zow_else : %empty | else
-else    : "else" ":" wom_stmts
+zom_else_if : %empty { $$ = std::nullopt; }
+    | zom_else_if else_if {
+    if ( $1.has_value() ){
+        chain( driver.program_structure, $1.value(), $2 );
+        $$ = $1;
+    }
+    else {
+        $$ = $2;
+    }
+}
+
+else_if : "else" "if" expr "then" ":" wom_stmts {
+    $$ = $6;
+}
+zow_else : %empty { $$ = std::nullopt; }
+    | else
+else    : "else" ":" wom_stmts {
+    $$ = $3;
+}
 
 selection_stmt : "for" WORD "in" expr zow_filter
                | "for" "some" WORD "in" expr zow_filter
