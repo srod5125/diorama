@@ -1,10 +1,9 @@
 
 #include <string>
 #include <unordered_map>
-#include <memory>
-#include <vector>
 
 #include "parser.hpp"
+#include "aux.hpp"
 //#include <cvc5/cvc5.h>
 
 #ifndef CALCXX_DRIVER_HPP
@@ -52,6 +51,9 @@ public:
   int rule_count;
 
 
+  std::unordered_map< int, Node > program_structure;
+
+
   calcxx_driver();
   virtual ~calcxx_driver();
 
@@ -62,17 +64,6 @@ public:
   void error(const std::string &m);
 
   void next_phase();
-
-
-  // known sort into
-  // std::unordered_map<std::string,cvc5::Sort>  string_sort_map;
-  // std::unordered_map<std::string,cvc5::Term> module_fns;
-
-  //TODO: struct map
-  //std::unordered_map<std::vector<std::string>,std::string> record_members_map;
-
-  //auxillary & helper member
-  std::queue<pair_string_rec> aux_string_rec_map;
 
 
 };

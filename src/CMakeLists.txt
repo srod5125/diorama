@@ -28,19 +28,27 @@ add_executable(tb
     ${CMAKE_SOURCE_DIR}/diorama_driver.hpp
     ${CMAKE_SOURCE_DIR}/location.hh
     ${CMAKE_SOURCE_DIR}/main.cpp
+    ${CMAKE_SOURCE_DIR}/aux.cpp
     ${BISON_parser_OUTPUTS}
     ${FLEX_lexer_OUTPUTS})
 
 
 # settings
-set(CMAKE_C_COMPILER clang++)
-set(CMAKE_BUILD_TYPE Debug)
-target_compile_features(tb PRIVATE cxx_std_20)
-target_compile_options(tb PRIVATE -Wall -Wextra)
+set(CMAKE_C_COMPILER clang)
+set(CMAKE_CXX_COMPILER clang++)
 
 # TODO: add if statment for release mode to compiler flags
 # set(CMAKE_BUILD_TYPE RelWithDebInfo)
+set(CMAKE_BUILD_TYPE Debug)
+
+# target flags
+target_compile_features(tb PRIVATE cxx_std_20)
+target_compile_options(tb PRIVATE -Wall -Wextra)
 
 
-include(CMakePrintHelpers)
-cmake_print_variables(CMAKE_SOURCE_DIR)
+
+# include(CMakePrintHelpers)
+# cmake_print_variables(CMAKE_SOURCE_DIR)
+
+
+# cmake -S src -B build

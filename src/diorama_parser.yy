@@ -20,55 +20,16 @@
   #include <optional>
   #include <tuple>
 
+  #include "aux.hpp"
+
 
   //since the parser is the root dependency
   //any global aliases are better placed here
 
-  using pair_of_strings = std::pair<std::string,std::string>;
-  using sort_or_string = std::variant<int,std::string>;
-
-
-  struct SortString {
-      std::string value;
-      SortString(const std::string& s) : value{s} {}
-      SortString() = default;
-  };
-
-  struct SetString {
-      std::string value;
-      SetString(const std::string& s) : value{s} {}
-      SetString() = default;
-  };
-
-
-
-  using sort_or_aux = std::variant<
-      SortString,
-      SetString,
-      pair_of_strings,
-      std::vector<sort_or_string>
-    >;
-  using pair_string_sort = std::pair<std::string,sort_or_aux>;
-
-  // we use map since insertions are odered
-  using record_map_aux = std::map<std::string,sort_or_aux>;
-
-  using pair_string_term = std::pair<std::string,int>;
-
-  using pair_string_rec = std::pair<std::string,record_map_aux>;
-
-  using vec_pair_strings = std::vector<pair_of_strings>;
-
+  // using block = std::pair< token , std::optional >
 
 
   enum class quant { any, all, at_least, at_most, always };
-
-  using cond_op_and_limit = std::pair<quant,int>;
-
-  using range_type = std::tuple<
-    int,int,
-    int,int
-  >;
 
 }
 
@@ -175,6 +136,10 @@ RBRACE     "}"
 %token <bool> FALSE TRUE
 %token FLOAT
 
+%type <Node> stmt wom_stmts
+%type <Node> if_stmt selection_stmt assignment
+
+%printer { yyoutput << "todo"; } <Node>;
 %printer { yyoutput << $$; } <*>;
 
 %start spec
@@ -262,8 +227,27 @@ zom_determining_exprs : %empty | zom_determining_exprs determining_exprs
 
 determining_exprs : "-" expr "."
 
-then_block : "then" ":" wom_stmts
-wom_stmts : wom_stmts stmt | stmt
+then_block : "then" ":" wom_stmts {
+
+    // in node -> all statements in then block -> out node
+    Node then_in = Node();
+
+    int stmt_start = $3.id;
+    then_in.tos.push_back( stmt_start );
+
+    int last_node_id = get_final_chain_id( then_in.id , driver.program_structure );
+
+    Node then_out = Node();
+    chain( driver.program_structure, last_node_id, then_out.id );
+
+    driver.program_structure[ then_in.id ] = then_in;
+    driver.program_structure[ then_out.id ] = then_out;
+
+}
+wom_stmts : stmt
+    |   wom_stmts stmt {
+    chain( driver.program_structure, $$ , $1 );
+}
 
 
 quantifier
@@ -278,7 +262,18 @@ stmt : if_stmt
      | selection_stmt "."
      | assignment "."
 
-if_stmt : "if" expr "then" ":" wom_stmts zom_else_if zow_else "end" "if"
+if_stmt : "if" expr "then" wom_stmts zom_else_if zow_else "end" "if" {
+
+    Node if_start = Node();
+    Node if_end = Node();
+
+    int stmt_id = $4.id;
+    if_start.tos.push_back( stmt_id );
+
+    int last_node_id = get_final_chain_id( if_start.id , driver.program_structure );
+
+
+}
 zom_else_if : %empty | zom_else_if else_if
 else_if : "else" "if" expr "then" ":" wom_stmts
 zow_else : %empty | else
@@ -290,7 +285,11 @@ selection_stmt : "for" WORD "in" expr zow_filter
 zow_filter : %empty | filter
 filter : "such" "that" expr
 
-assignment : lhs_name_sel "'" ":=" expr
+assignment : name_sel "'" ":=" expr {
+    Node assign_node = Node();
+    $$ =  assign_node;
+    driver.program_structure[ assign_node.id ] = assign_node;
+}
 
 expr  : equality
       | expr "and" equality
@@ -330,9 +329,10 @@ arithmatic  : term
             | arithmatic "*" term
             | arithmatic "/" term
 
-rhs_name_sel  : WORD | WORD wom_sel
+// lhs & rhs name_sel
 
-lhs_name_sel  : WORD | WORD wom_sel
+name_sel  : WORD | WORD wom_sel
+
 
 
 wom_sel : wom_sel "->" WORD | "->" WORD
@@ -354,13 +354,13 @@ structure_row : WORD ":" structure
 
 atom : INT
     | FLOAT
-    | rhs_name_sel
+    | name_sel
     | tuple_val {}
     | FALSE
     | TRUE
     | enum_val {}
 
-enum_val : rhs_name_sel "<" WORD ">"
+enum_val : name_sel "<" WORD ">"
 tuple_val : "(" wom_atom  ")"
 wom_atom : wom_atom "," atom | atom
 
