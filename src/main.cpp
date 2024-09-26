@@ -24,9 +24,11 @@ int main(int argc, char **argv)
 
   else if (argc == 2){
 
-    for ( ; driver.p != end ; driver.next_phase() ) {
-        driver.parse(argv[1]);
-    }
+    //for ( ; driver.p != end ; driver.next_phase() ) {
+    //}
+
+    driver.parse(argv[1]);
+    print_graph( program_structure );
 
   }
   else {

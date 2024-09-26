@@ -1,6 +1,5 @@
 #include <assert.h>
 #include <iostream>
-#include <memory>
 #include "diorama_driver.hpp"
 //#include <cvc5/cvc5.h>
 
@@ -61,12 +60,12 @@ void calcxx_driver::error(const std::string &m)
 //TODO: phase 0 is syntax checking phase, if fail
 //TODO: do not advance phase
 
- void calcxx_driver::next_phase(){
+void calcxx_driver::next_phase(){
 
-    if ( this->p != end ){
-        this->p = (PHASE)(this->p+1);
-    }
+   if ( this->p != end ){
+       this->p = (PHASE)(this->p+1);
+   }
 
-    PHASE beyond_end = (PHASE)(end+1);
-    assert(this->p != beyond_end);
- }
+   PHASE beyond_end = (PHASE)(end+1);
+   assert(this->p != beyond_end);
+}

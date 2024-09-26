@@ -51,9 +51,6 @@ public:
   int rule_count;
 
 
-  std::unordered_map< int, Node > program_structure;
-
-
   calcxx_driver();
   virtual ~calcxx_driver();
 

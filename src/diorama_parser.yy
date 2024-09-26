@@ -189,9 +189,6 @@ tuple_decl  : WORD either_in_or_is "(" wom_types ")"
 wom_types  : wom_types "," WORD | WORD
 
 
-
-
-
 //TODO: wom_elements -> wom_terms
 
 either_in_or_is : "in" | "is"
@@ -234,22 +231,26 @@ then_block : "then" ":" wom_stmts {
 
     // in node -> all statements in then block -> out node
     Node then_in = Node();
+    then_in.temp_tag = "then in";
+    register_node(then_in);
 
     int stmt_start = $3.id;
     then_in.tos.push_back( stmt_start );
 
-    int last_node_id = get_final_chain_id( then_in.id , driver.program_structure );
+    int last_node_id = get_final_chain_id( then_in.id , program_structure );
 
     Node then_out = Node();
-    chain( driver.program_structure, last_node_id, then_out.id );
+    then_out.temp_tag = "then out";
+    register_node(then_out);
+    chain( program_structure, last_node_id, then_out.id );
 
-    driver.program_structure[ then_in.id ] = then_in;
-    driver.program_structure[ then_out.id ] = then_out;
+    program_structure[ then_in.id ] = then_in;
+    program_structure[ then_out.id ] = then_out;
 
 }
 wom_stmts : stmt
     |   wom_stmts stmt {
-    chain( driver.program_structure, $$ , $1 );
+    chain( program_structure, $1 , $$ );
 }
 
 
@@ -268,25 +269,31 @@ stmt : if_stmt
 if_stmt : "if" expr "then" wom_stmts zom_else_if zow_else "end" "if" {
 
     Node if_start = Node();
+    if_start.temp_tag = "if start";
+    register_node( if_start );
+
     Node if_end = Node();
+    if_end.temp_tag = "if end";
+    register_node( if_end );
+
 
     int stmt_id = $4.id;
     if_start.tos.push_back( stmt_id );
 
-    int last_node_id = get_final_chain_id( if_start.id , driver.program_structure );
+    int last_node_id = get_final_chain_id( if_start.id , program_structure );
 
     auto else_ifs = $5;
     if ( else_ifs.has_value() ) {
-        chain( driver.program_structure, last_node_id, else_ifs.value() );
-        last_node_id = get_final_chain_id( last_node_id , driver.program_structure );
+        chain( program_structure, last_node_id, else_ifs.value() );
+        last_node_id = get_final_chain_id( last_node_id , program_structure );
     }
     auto else_stmt = $6;
     if ( else_stmt.has_value() ) {
-        chain( driver.program_structure, last_node_id, else_stmt.value() );
-        last_node_id = get_final_chain_id( last_node_id , driver.program_structure );
+        chain( program_structure, last_node_id, else_stmt.value() );
+        last_node_id = get_final_chain_id( last_node_id , program_structure );
     }
 
-    chain( driver.program_structure, last_node_id, if_end );
+    chain( program_structure, last_node_id, if_end );
     if_start.tos.push_back( if_end.id );
 
     $$ = if_start;
@@ -294,7 +301,7 @@ if_stmt : "if" expr "then" wom_stmts zom_else_if zow_else "end" "if" {
 zom_else_if : %empty { $$ = std::nullopt; }
     | zom_else_if else_if {
     if ( $1.has_value() ){
-        chain( driver.program_structure, $1.value(), $2 );
+        chain( program_structure, $1.value(), $2 );
         $$ = $1;
     }
     else {
@@ -319,8 +326,9 @@ filter : "such" "that" expr
 
 assignment : name_sel "'" ":=" expr {
     Node assign_node = Node();
+    assign_node.temp_tag = "assignment";
+    register_node( assign_node );
     $$ =  assign_node;
-    driver.program_structure[ assign_node.id ] = assign_node;
 }
 
 expr  : equality
