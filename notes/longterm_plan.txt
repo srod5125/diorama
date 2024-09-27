@@ -1,0 +1,77 @@
+PHASE 1: implement language
+PHASE 2: tauri drawing gui interface sketch thing
+PHASE 3: temporal logic implementation
+PHASE 4: editor style interactive mode with gui
+PHASE 5: ontology buisness requirements language
+PHASE 6: lexer in diff languages, disabilites features
+PHASE 7: develop wider tooling for interfacing with different editors
+
+
+FEATURE: when some check violation is found, report that violation as a sequence of transitions in some branching movie file, for the user to flick through
+
+FEATURE: tabular state space profiler, interactive + sql like search
+
+FEATURE: time drag for lsp to kick in, user should be able to decide
+         when lsp gives err
+
++ why is some action never reached
+FEATURE: small query language for giving either trace/countexmple for some short scenario like RANDOM INITS -> SHOW TRACE WHEN CLOCK==12,
+for what inputs id this true, 
+
++ quickly see effects of spec change
+
+/movie-like/tabular/trace+breakpoint like/graph-explorer
+interactive feature <go back and forth between specs and change behavior>
+action call graph
+
+EVENTUALLY: integrate cvc5
+EVENTUALLY: store repeated processes in some intermediate cache
+            to be shuttled into longterm mem
+
+EVENTUALLY: build small reusable library for common patterns
+            anad actions (such as modelling pub-sub architecture)
+
+LANGUAGE FEATURE: must be modular
+LANGUAGE FEATURE: must be easy to extend vis refinment
+
+FEATURE?
+[expectant queries]
+given this scenario ... 
+    what should one expect
+    should we expect the following to hold
+    does that violate any previously held assumptions
+
+FEATURE?
+[write a test given this happens]
+what are some things that must hold or fall for the following to be true
+
+
+
+checking what u dont know u should know
+cross product of all actions & how vars should behave between all actions, in order to help user fully define spec
+
+start with inits, then add actions and branch from there
+interactive invariant formulation (see which states pass, which dont)
+
+which behaviors were added between full spec changes
+
+frames & onion skin
+
+grouping nodes based on ranges, instead of transitioning atomically, generate nodes when there is another call to some action, some invariant state is violated, or the user watches for changes given some condition
+
+
+group objects using quantifiers => where some condition =>
+    perform some actions
+
+FEATURE: notify the user of contradictions
+FEATURE: tell the user about unexplored spaces when adding to the spec, for instance if a traffic light was previously specified as {red,green}, making it {red,yellow,green} should tell the user which spaces and actions havent been considered yet
+
+INTERNAL FEATURE: the language should itself be captured inside the sysgus syhtesize and be built as the suer adds code somehow, that is before the program begins, the lagnuage shoudl be embedded inside a sysgus solver grammar, as the user writes actions and checks the user sysgus program should be pariatlly sysntehsised allong with the users spec code
+
+
+EVENTUALLY REFACTOR: member declerations out of order, when parser cant find something, ask user for def
+
+EVENTUALLY: support mardown like systax and formatting 
+
+
+EVENTUALLY: add simplyifing feature, user can add as many logical statements as they desire, call cvc5.simplify, rreturn or syhteisis over lang, then reutrn rules as rewritten in own lang

@@ -1,0 +1,76 @@
+all things are equal, tries to find boundries between spacies, everyting is a paramterized space that can be transformed into any other space
+
+informal descriptive language
+
+human and computer engage in conversation
+
+as rules are added invariants are stored
+when a rules is added that violates a previoulsy held invariant a converastion ensure between rule set and user
+
+a model of a system will output a set of invariants, two models describing the same phenomena will support different invarints, exploring where the pivot points are between the invariants; transofrming the invariant into a query and then posing that query to the other model or the external universe to glue or melt models together
+
+spec lang
+- describe variables + user provided variables
+- conditional actions over those variables
+- perform beadth first search over all potential transitions
+- allow user to define invariants; querey about what sequence of events a system must reach before achieving a pattern amtched state; capute error states
+- make user aware of cases they hadnt considered (as states are explored, compress or pattern match and categorize states)
+
+
+
+with special messaging module offered
+
+
++ over a set of decisions :> find set of minimal distinguishing invariants then ask user to decide which invariants to support
++ when lang_engine doesn''t understand input :> ask user for set of disinguishing inputs should be able to answer any question: when the model cannot understand something :> should query the user and disentablge or peel away ambiquity
+
+
+
+
+Only the system’s data administrator can change access permissions for the particular system information may only be changed by the system’s data administrator.
+
+The database update process must roll back all related updates when any update fails.
+
+cross product between object in the containing system & the lower level objects
+
+a computer must back up before power cuts of
+a computer is stored in a building
+
+ontological requirements langage: user is able to epxress buisness logic loosely, in very modular form,
+requirements: all about what is needed not how
+shall keyword,
+property-of derived facts
+tests should be derivable from requirements
+tests r related to queires
+test r existential functions mapping requirements to booleans
+
+test(set of properiteies) -> 
+    a set of functions such that the
+    set covers the set of properiteies maximally
+
+    p1 | p2 | p3 | ...
+t1| x  |    | x  | ...
+t2|    | x  |    | ...
+..
+where each function maps () -> bool
+
+
+include articles list, options noop words for usability such as the and will
+
+reactive properiteies that can be derived when given some plan or series of actions or query, for example: how domains in the mmc are responsible for achieving or fulfilling a particular function within some subsystem, 
+    some assertion about some agent or part of the system
+    some change or query is made about that part
+    diorama should say which assertions are related to the change or query or action
+    concerned-property
+
+sequence between the state X members as a substitue for 
+         temporal line, all temporal axioms would concern that line
+         (a) -> (a) -> (a) ...
+
+
+Purpose: Assertions aim to make a statement, while queries aim to gather knowledge.
+
+claim as both query and check, the word claim strikes a happy medium between being interpreted as potentially both a query (do you claim this is correct?) and an assertion (I claim this is true)
+
+add graph or enum of states to member, actions x state 
+ actions are like signals over the potential state space

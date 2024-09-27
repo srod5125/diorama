@@ -39,8 +39,6 @@ build/*
 temp
 temp/*
 
-notes
-notes/*
 
 src/parser.output
 parser.output

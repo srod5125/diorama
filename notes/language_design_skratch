@@ -1,0 +1,70 @@
+schemas+
+
+members { set of vars }
+
+init is
+
+    stmts.
+
+end init
+
+actions+
+
+check:
+
+
+
+query_sub_lang:
+
+given ... as init when is conds
+how often does x happen
+
+
+--------------------------------------------
+    module time is
+
+        Clocks are { hours, minutes, seconds }
+            where: hours is in Int and is between 1..12.
+            where: minutes is in Int and is between 1..59.
+            where: seconds is in Int and is between 1..59.
+
+        members are { c in Clocks }
+
+        action Tick is
+            when always:
+            then:
+                for c in members.
+                c->seconds' := c->seconds + 1.
+                
+                if c->seconds equals 59 then:
+                    c->seconds' := 1.
+                    c->minutes' := c->minutes + 1.
+                end if
+
+                if c->minutes equals 59 then:
+                    c->minutes' := 1.
+                    c->hours' := c->hours + 1.
+                end if
+
+                if c->hours equals 12 then:
+                    c->hours' := 1.
+                end if
+                
+        end action
+
+    end time 
+
+--------------------------------------------
+
+can {
+    x = 10.
+}
+
+rule {
+    x is never 10
+}
+
+claim {
+    can never happen: x = 10
+}
+--------------------------------------------

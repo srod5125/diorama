@@ -1,0 +1,215 @@
+== OUTLINE ==
+schemes, inits?, actions, checks
+
+
+== TLA+ CHOOSE, for some function ==
+some Boolean function from 1..10 that covers FALSE and TRUE
+some Boolean function f 
+    where
+        f.domain = 1..10
+        f.range = FALSE and TRUE
+except-when then
+
+
+== SOME EXAMPLE ==
+For an example of using the LTL DSL, consider the following formulation of a problem in which six people are attempting to cross a river in a boat that holds at most two people at a time. Also, the six people are 3 couples, with jealous husbands, such that no woman may be around another man without also being around her husband. The boat cannot cross the river without someone in it.
+
+AGENT,ENVIRONEMNT, ITEM
+declare people, river, boat
+
+6 people cross river
+boat.capacity < 2
+A couple is 2 people
+
+labels:
+    people
+schemas:
+    couple = {husband,wife}
+    river = [2 x boat!]
+    boat = { people; people }
+    husband : people
+    wife : people
+vars:
+    3 couple = couples
+    1 boat
+    1 river
+
+boat.cross_river is
+    when river = [;boat]
+        then river = [boat;]
+
+    when river = [boat;]
+        then river = [;boat]
+
+when boat = {}
+    boat cannot cross_river
+otherwise
+    boat can cross_river
+
+func addall(somevec: vec){
+    for i in doman(somevec)
+        sum += i
+    return sum
+}
+setops: 
+
+
+
+
+== TO BE SPECIFIED ==
+Also, the six people are 3 couples, with jealous husbands, such that no woman may be around another man without also being around her husband.
+
+
+==CLOCK==
+
+Clocks are {
+    hours   in Int is between 1..12,
+    minutes in Int is between 1..59,
+    seconds in Int is between 1..59
+}
+
+
+func addOne(Int v) -> Int {
+    to v'+1
+}
+
+# elemenet Notation: e in Set where conds...
+# set Notation: Ss are {...} | Ss are Sets where conds...
+# forall
+# forsome
+# suchthat
+# is [in sme set, between some range]
+# between
+# pascal keyword+block+end_keyword syntax
+# no semi colons
+# periods for ending statements are &s
+# sematic actions such as ifs will be terminated by ':'
+
+members: c in Clocks,
+         studioClocks are 3 Clocks where conds...
+
+clock.tick {
+    addOne(hours)
+    minutes' := minutes +1
+    seconds.next := seconds.old + 1
+}
+
+action Tick is
+when all
+    for c in members.
+    c.seconds' := c.seconds+1
+then
+    if  c.seconds == 59  then:
+        c.seconds' := 1.
+        c.minutes' := c.minutes + 1.
+    end if
+
+    if  c.minutes == 59 then
+        c.minutes' := 1.
+        c.hours' := c.hours + 1.
+    end if
+
+    if  c.hours == 12 then:
+        c.hours' := 1.
+    or then.
+        ...
+    end if.
+
+
+
+end action
+
+
+
+
+action Tick is
+when any/all/atleast N/atmost 2
+[ordered]
+    c.minutes = 59.
+{or when_block...}
+then
+    c.minutes' := 1.
+    c.hours' := c.hours + 1.
+{or then_block}
+
+
+when c.hours = 12 then c.hours' := 1.
+
+when
+    clock.tick;
+    pluck c from clock where conds...
+    c.hours' = c.hours+1 ect
+
+func ( hand, threshold in Int):
+    if hand = threshold
+    then hand' := hand + 1;
+
+tick is when
+    clock.seconds' := clock.seconds +  1
+    if clock.seconds = 59
+    then  
+        clock.seconds := 1,
+        clock.minutes' := clock.minutes + 1
+    if clock.minutes = 59
+        then clock.minue
+
+for all, for some, suchthat
+
+
+check saturn is:
+let CheckSet := for all employees [e] suchthat check_criteria(e) is true
+let Saturn_Set := for all employees [e] suchthat saturn.retrieve(e) is true
+makesure CheckSet = Saturn_Set
+
+
+when all/any of the following cnditins have been met
+when atmost N are true
+    - a
+    - b
+    - c
+then xyw
+unless
+    ...
+
+when any of the following cnditins have been met
+then xyx will happen in
+    1. a
+    2. b
+    3. c
+
+'
+
+
+members are {
+    a is aaa,
+    b in bbb,
+    d 
+}
+
+clocks are { 0, 1 }
+is in {0,1}
+
+start for c is
+    w := 0
+    b := 0
+end start
+
+start for array is
+    len := 0
+    domain := (structure*)
+    range := (structure*)
+end start
+
+start for array is 
+    (structure := structure,)*
+end start
+
+start for members is
+end start 
+    
+
+end begins
+
+
+structure => structure
+
