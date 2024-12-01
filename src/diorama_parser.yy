@@ -1,9 +1,12 @@
 %skeleton "lalr1.cc"
 %require "3.8.2"
-%defines
-%define api.parser.class {calcxx_parser}
+
+
+%define api.parser.class { calcxx_parser }
+
 %define api.token.constructor
 %define api.value.type variant
+
 %define parse.assert
 
 %code requires
@@ -141,8 +144,8 @@ RBRACE     "}"
 %type <std::optional<Node>> zom_else_if zow_else
 %type <Node> else_if else
 
-%printer { yyoutput << "todo opt"; } <std::optional<Node>>;
-%printer { yyoutput << $$.id << "todo tos"; } <Node>;
+%printer { yyoutput << "TODO opt"; } <std::optional<Node>>;
+%printer { yyoutput << $$.id << "TODO tos"; } <Node>;
 %printer { yyoutput << $$; } <*>;
 
 %start spec
@@ -154,8 +157,8 @@ spec : module
 module :  "module" WORD "is" data body "end" WORD
 
 
-// todo: eventually test out of order decleration,
-// todo: mix data and body under univeral_block
+// TODO: eventually test out of order decleration,
+// TODO: mix data and body under univeral_block
 
 data : wom_schemes
 body : inits zom_rules
@@ -166,10 +169,11 @@ scheme : record_decl
 
 word_or_members : WORD | "members"
 
-record_decl : "record" word_or_members "are" wom_decleration "end" "record"
+are_or_is : "are" | "is"
 
+record_decl : "record" word_or_members are_or_is wom_decleration "end" "record"
 
-enum_decl : WORD "are" "<" wom_enums ">"
+enum_decl : WORD are_or_is "<" wom_enums ">"
 wom_enums : wom_enums "," WORD | WORD
 
 
@@ -197,6 +201,7 @@ inits : zom_inits members_init
 
 zom_inits : %empty | zom_inits init
 init : struct_init | array_init
+    /*TODO: basic init & array init should be unified*/
 array_init   : "start" "for" WORD "is" array_map_init "end" "start"
 struct_init  : "start" "for" WORD "is" basic_init "end" "start"
 members_init : "start" "for" "members" "is" basic_init "end" "start"
@@ -215,7 +220,7 @@ word_to_structure :  WORD ":=" structure
 zom_rules : %empty | zom_rules rule
 zow_word : %empty | WORD
 
-rule : "rule" zow_word "is" wom_when_blocks wom_then_blocks "end" "rule"
+rule : "rule" zow_word are_or_is wom_when_blocks wom_then_blocks "end" "rule"
 
 wom_when_blocks : wom_when_blocks "or" when_block | when_block
 wom_then_blocks : wom_then_blocks "or" then_block | then_block
@@ -411,7 +416,7 @@ wom_atom : wom_atom "," atom | atom
 
 %%
 
-void yy::calcxx_parser::error(const location_type &l, const std::string &m)
+void yy::calcxx_parser::error(const location &l, const std::string &m)
 {
   driver.error(l, m);
 }

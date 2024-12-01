@@ -32,12 +32,14 @@ test_input.txt
 
 tb
 
-build
 build/*
 
 
 temp
 temp/*
+
+notes
+notes/*
 
 
 src/parser.output
@@ -45,3 +47,7 @@ parser.output
 
 
 .vscode/settings.json
+
+
+.zed/*
+.zed

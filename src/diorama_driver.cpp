@@ -22,7 +22,7 @@ calcxx_driver::calcxx_driver()
 
   //adding known sorts
   // this->string_sort_map["int"]  = this->tm->getIntegerSort();
-  // this->string_sort_map["bool"] = this->tm->getBooleanSort();
+  // this->string_sort_map["bool"] = this-e>tm->getBooleanSort();
 
 }
 

@@ -16,12 +16,9 @@ private:
 public:
     int id;
     std::vector<int> tos;
-
     std::string temp_tag;
 
-
     Node();
-
 
     friend std::ostream & operator << (std::ostream & out, const Node & n);
 
@@ -34,8 +31,8 @@ using graph_type = std::unordered_map< int,  Node >;
 int get_final_chain_id( const int id_begining, graph_type & graph );
 
 void chain(  graph_type & graph, int from, int to );
-void chain(  graph_type & graph, int from, Node to );
-void chain(  graph_type & graph, Node from, Node to );
+void chain(  graph_type & graph, int from, Node & to );
+void chain(  graph_type & graph, Node & from, Node & to );
 
 
 // Todo: wrap in name space

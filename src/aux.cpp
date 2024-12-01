@@ -24,8 +24,8 @@ std::ostream & operator << (std::ostream & out, const Node & n) {
     for ( std::size_t i = 0; i < n.tos.size(); i+=1 ) {
         out << "-> " << n.tos[i];
     }
-    out << "\t";
 
+    out << "\t";
     out << "[ label = \"" << n.id << " " << n.temp_tag << "\"]";
 
     return out;
@@ -72,14 +72,14 @@ void chain(  std::unordered_map< int, Node > & graph, int from, int to ) {
     graph.at( from ).tos.push_back(to);
 }
 
-void chain(  std::unordered_map< int, Node > & graph, int from, Node to ) {
+void chain(  std::unordered_map< int, Node > & graph, int from, Node & to ) {
     // if ( graph.find(to.id) == graph.end() ) {
     //     graph[to.id] = to;
     // }
     graph.at( from ).tos.push_back(to.id);
 }
 
-void chain(  std::unordered_map< int, Node > & graph, Node from, Node to ) {
+void chain(  std::unordered_map< int, Node > & graph, Node & from, Node & to ) {
     // if ( graph.find(from.id) == graph.end() ) {
     //     graph[from.id] = from;
     // }

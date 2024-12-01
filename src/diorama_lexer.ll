@@ -8,7 +8,6 @@
   #include "parser.hpp"
   #include "diorama_driver.hpp"
 
-  #include <cvc5/cvc5.h>
 
   #undef yywrap
   #define yywrap() 1
@@ -16,8 +15,8 @@
   static yy::location loc;
 %}
 
-%option nodefault
-%option noyywrap nounput batch debug noinput
+%option nodefault noyywrap nounput
+%option batch debug noinput
 
 comment [/][*][^*]*[*]+([^*/][^*]*[*]+)*[/]
 word    [a-zA-Z][a-zA-Z_0-9]*

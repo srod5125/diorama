@@ -1,0 +1,23 @@
+module time is
+
+    record clock is
+        hour is int.
+        min  is int.
+    end record
+
+    light is < on, off >
+
+    start for members is
+        hour   := 0,
+        minute := 0
+    end start
+
+
+    rule tick is
+        when always:
+        then:
+            minute' := minute + 1.
+    end rule
+
+
+end time
