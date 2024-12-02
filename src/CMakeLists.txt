@@ -13,6 +13,8 @@ bison_target(parser
     DEFINES_FILE
     ${CMAKE_CURRENT_BINARY_DIR}/parser.hpp)
 
+#TODO: -Wcounterexamples add option to generate bison counterexamples
+
 find_package(FLEX 2.6.4)
 flex_target(lexer
     ${CMAKE_SOURCE_DIR}/diorama_lexer.ll
@@ -47,6 +49,8 @@ set(CMAKE_BUILD_TYPE Debug)
 target_compile_features(tb PRIVATE cxx_std_20)
 target_compile_options(tb PRIVATE -Wall -Wextra)
 
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
 # include(CMakePrintHelpers)

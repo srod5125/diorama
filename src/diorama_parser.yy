@@ -235,27 +235,21 @@ determining_exprs : "-" expr "."
 then_block : "then" ":" wom_stmts {
 
     // in node -> all statements in then block -> out node
-    Node then_in = Node();
-    then_in.temp_tag = "then in";
+    Node then_in = Node("then in");
     register_node(then_in);
 
-    int stmt_start = $3.id;
-    then_in.tos.push_back( stmt_start );
-
-    int last_node_id = get_final_chain_id( then_in.id , program_structure );
-
-    Node then_out = Node();
-    then_out.temp_tag = "then out";
+    Node then_out = Node("then out");
     register_node(then_out);
-    chain( program_structure, last_node_id, then_out.id );
 
-    program_structure[ then_in.id ] = then_in;
-    program_structure[ then_out.id ] = then_out;
+    chain( then_in , $3 );
+    int last_node_id = get_final_chain_id( then_in.id );
+    LOG( last_node_id );
+    chain( last_node_id, then_out.id );
 
 }
 wom_stmts : stmt
     |   wom_stmts stmt {
-    chain( program_structure, $1 , $$ );
+    chain( $1 , $$ );
 }
 
 
@@ -273,40 +267,38 @@ stmt : if_stmt
 
 if_stmt : "if" expr "then" wom_stmts zom_else_if zow_else "end" "if" {
 
-    Node if_start = Node();
-    if_start.temp_tag = "if start";
+    Node if_start = Node("if start");
     register_node( if_start );
 
-    Node if_end = Node();
-    if_end.temp_tag = "if end";
+    Node if_end = Node("end if");
+    LOG( if_end.id );
     register_node( if_end );
 
+    chain( if_start, $4 );
 
-    int stmt_id = $4.id;
-    if_start.tos.push_back( stmt_id );
-
-    int last_node_id = get_final_chain_id( if_start.id , program_structure );
+    int last_node_id = get_final_chain_id( if_start.id );
 
     auto else_ifs = $5;
     if ( else_ifs.has_value() ) {
-        chain( program_structure, last_node_id, else_ifs.value() );
-        last_node_id = get_final_chain_id( last_node_id , program_structure );
-    }
-    auto else_stmt = $6;
-    if ( else_stmt.has_value() ) {
-        chain( program_structure, last_node_id, else_stmt.value() );
-        last_node_id = get_final_chain_id( last_node_id , program_structure );
+        chain( last_node_id, else_ifs.value() );
+        last_node_id = get_final_chain_id( last_node_id );
     }
 
-    chain( program_structure, last_node_id, if_end );
-    if_start.tos.push_back( if_end.id );
+    auto else_stmt = $6;
+    if ( else_stmt.has_value() ) {
+        chain( last_node_id, else_stmt.value() );
+        last_node_id = get_final_chain_id( last_node_id  );
+    }
+
+    chain( last_node_id, if_end );
+    chain( if_start, if_end );
 
     $$ = if_start;
 }
 zom_else_if : %empty { $$ = std::nullopt; }
     | zom_else_if else_if {
     if ( $1.has_value() ){
-        chain( program_structure, $1.value(), $2 );
+        chain( $1.value() , $2 );
         $$ = $1;
     }
     else {
@@ -315,12 +307,19 @@ zom_else_if : %empty { $$ = std::nullopt; }
 }
 
 else_if : "else" "if" expr "then" ":" wom_stmts {
-    $$ = $6;
+    Node else_if_node = Node("else if");
+    register_node( else_if_node );
+    $$ = else_if_node;
+
+    chain( else_if_node, $6 );
 }
-zow_else : %empty { $$ = std::nullopt; }
-    | else
+zow_else : %empty { $$ = std::nullopt; } | else
 else    : "else" ":" wom_stmts {
-    $$ = $3;
+    Node else_node = Node("else");
+    register_node( else_node );
+    $$ = else_node;
+
+    chain( else_node, $3 );
 }
 
 selection_stmt : "for" WORD "in" expr zow_filter
@@ -330,8 +329,7 @@ zow_filter : %empty | filter
 filter : "such" "that" expr
 
 assignment : name_sel "'" ":=" expr {
-    Node assign_node = Node();
-    assign_node.temp_tag = "assignment";
+    Node assign_node = Node("assignment");
     register_node( assign_node );
     $$ =  assign_node;
 }

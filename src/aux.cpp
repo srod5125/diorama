@@ -13,7 +13,13 @@ Node::Node() {
     id_count++;
 
     this->temp_tag = "xxx";
+}
 
+Node::Node(const std::string & tag) {
+    this->id = id_count;
+    id_count++;
+
+    this->temp_tag = tag;
 }
 
 
@@ -25,68 +31,62 @@ std::ostream & operator << (std::ostream & out, const Node & n) {
         out << "-> " << n.tos[i];
     }
 
-    out << "\t";
+    out << "\t\t";
     out << "[ label = \"" << n.id << " " << n.temp_tag << "\"]";
 
     return out;
 }
 
-
-
-
-
 // ----------
 
 
 
-int get_final_chain_id (
-    const int id_begining ,
-    std::unordered_map< int, Node > & graph ) {
+int get_final_chain_id ( const int id_begining ) {
 
-        const int undefined_node_id = -1;
+    const int undefined_node_id = -1;
 
-        int node_iter    = id_begining;
-        int curr_node_id = id_begining;
+    int node_iter    = id_begining;
+    int curr_node_id = id_begining;
 
-        while ( node_iter != 0 ) {
+    while ( node_iter != 0 ) {
 
-            if ( graph.find( node_iter ) == graph.end() ){
-                return  undefined_node_id;
-            }
-
-            if ( graph[ node_iter ].tos.empty() ) {
-                node_iter = 0;
-            }
-            else {
-                node_iter    = *(graph[ node_iter ].tos.begin());
-                curr_node_id = node_iter;
-            }
+        if ( program_structure.find( node_iter ) == program_structure.end() ){
+            return  undefined_node_id;
         }
 
-        return curr_node_id;
+        if ( program_structure[ node_iter ].tos.empty() ) {
+            node_iter = 0;
+        }
+        else {
+            node_iter    = *(program_structure[ node_iter ].tos.begin());
+            curr_node_id = node_iter;
+        }
+    }
+
+    return curr_node_id;
 
 }
 
 
-void chain(  std::unordered_map< int, Node > & graph, int from, int to ) {
-    graph.at( from ).tos.push_back(to);
+void chain( int from, int to ) {
+    program_structure.at( from ).tos.push_back(to);
 }
 
-void chain(  std::unordered_map< int, Node > & graph, int from, Node & to ) {
-    // if ( graph.find(to.id) == graph.end() ) {
+void chain(  int from, Node & to ) {
+    // if ( program_structure.find(to.id) == graph.end() ) {
     //     graph[to.id] = to;
     // }
-    graph.at( from ).tos.push_back(to.id);
+    program_structure.at( from ).tos.push_back(to.id);
 }
 
-void chain(  std::unordered_map< int, Node > & graph, Node & from, Node & to ) {
+void chain(  Node & from, Node & to ) {
     // if ( graph.find(from.id) == graph.end() ) {
     //     graph[from.id] = from;
     // }
     // if ( graph.find(to.id) == graph.end() ) {
     //     graph[to.id] = to;
     // }
-    graph.at( from.id ).tos.push_back(to.id);
+    program_structure.at( from.id ).tos.push_back(to.id);
 }
 
 
@@ -103,10 +103,7 @@ void print_graph( graph_type g ) {
 // ----------
 
 void register_node(Node & n ) {
-
     program_structure[ n.id ] = n;
-
 }
-
 
 // ----------
