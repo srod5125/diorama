@@ -1,6 +1,5 @@
 
 #include <string>
-#include <unordered_map>
 
 #include "parser.hpp"
 #include "aux.hpp"
@@ -28,7 +27,6 @@ enum PHASE {
 class calcxx_driver
 {
 public:
-
 
   std::string file;
   bool trace_scanning;

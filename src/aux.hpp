@@ -3,7 +3,6 @@
 #include <vector>
 #include <unordered_map>
 #include <string>
-#include <iostream>
 #include <list>
 
 #ifndef AUX_HPP
@@ -49,30 +48,6 @@ void print_graph( graph_type g );
 enum node_kind {
     node, //TODO: add all node tyes & replace tags with switch case
 };
-
-
-template <typename Arg>
-void LOG_CHOP(Arg arg) {
-   std::cout << arg << " ";
-}
-template <typename First, typename... Args>
-void LOG_INNER(First first, Args... args) {
-    LOG_CHOP(first);
-    LOG_INNER(args...);
-}
-template <typename First, typename... Args>
-void LOG(First first) {
-   std::cout << "LOG: ";
-   LOG_CHOP(first);
-   std::cout << std::endl;
-}
-template <typename First, typename... Args>
-void LOG(First first, Args... args) {
-   std::cout << "LOG: ";
-   LOG_CHOP(first);
-   LOG_INNER(args...);
-   std::cout << std::endl;
-}
 
 
 #endif

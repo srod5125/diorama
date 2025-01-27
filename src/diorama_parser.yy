@@ -24,6 +24,7 @@
   #include <tuple>
 
   #include "aux.hpp"
+  #include "log.hpp"
 
 
   //since the parser is the root dependency

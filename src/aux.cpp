@@ -1,6 +1,7 @@
 #include <unordered_map>
-#include "aux.hpp"
 
+#include "aux.hpp"
+#include "log.hpp"
 
 // ----------
 
@@ -94,7 +95,7 @@ void chain(  Node & from, Node & to ) {
 void print_graph( graph_type g ) {
 
     for ( const auto & [_, node] : g  ) {
-        std::cout << node << std::endl;
+        LOG( node );
     }
 
 }

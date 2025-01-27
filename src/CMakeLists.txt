@@ -24,11 +24,16 @@ add_flex_bison_dependency(lexer parser)
 
 # todo add if not defined for both flex & bison files
 
+find_package(cvc5)
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # target definition
 include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 
-add_executable(tb
+set(PROJ "tb")
+
+add_executable(${PROJ}
     ${CMAKE_SOURCE_DIR}/diorama_driver.cpp
     ${CMAKE_SOURCE_DIR}/diorama_driver.hpp
     ${CMAKE_SOURCE_DIR}/main.cpp
@@ -46,8 +51,11 @@ set(CMAKE_CXX_COMPILER clang++)
 set(CMAKE_BUILD_TYPE Debug)
 
 # target flags
-target_compile_features(tb PRIVATE cxx_std_20)
-target_compile_options(tb PRIVATE -Wall -Wextra)
+target_compile_features(${PROJ} PRIVATE cxx_std_20)
+target_compile_options(${PROJ} PRIVATE -Wall -Wextra)
+
+# link with cvc5
+target_link_libraries(${PROJ} cvc5::cvc5)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
