@@ -26,9 +26,7 @@ extra/*
 extra
 
 
-todo.txt
-
-test_input.txt
+todo.md
 
 tb
 
@@ -52,3 +50,6 @@ parser.output
 .zed
 
 .cache
+
+test/*
+test

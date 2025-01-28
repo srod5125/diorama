@@ -14,6 +14,7 @@
   class calcxx_driver;
 
   #include <string>
+  #include <string_view>
   #include <utility>
   #include <variant>
   #include <vector>
@@ -104,6 +105,8 @@ AT         "at"
 MOST       "most"
 LEAST      "least"
 ALWAYS     "always"
+NEVER      "never"
+MUST       "must"
 IF         "if"
 ELSE       "else"
 SOME       "some"
@@ -135,12 +138,12 @@ RBRACE     "}"
 
 
 
-%token <std::string> WORD
+%token <std::string_view> WORD
 %token <int> INT
 %token <bool> FALSE TRUE
 %token FLOAT
 
-%type <Node> stmt wom_stmts
+/*
 %type <Node> if_stmt selection_stmt assignment
 %type <std::optional<Node>> zom_else_if zow_else
 %type <Node> else_if else
@@ -148,6 +151,7 @@ RBRACE     "}"
 %printer { yyoutput << "TODO opt"; } <std::optional<Node>>;
 %printer { yyoutput << $$.id << "TODO tos"; } <Node>;
 %printer { yyoutput << $$; } <*>;
+*/
 
 %start spec
 
@@ -155,24 +159,25 @@ RBRACE     "}"
 
 spec : module
 
-module :  "module" WORD "is" data body "end" WORD
+module :  "module" WORD "is" data body zom_assertions "end" WORD
 
 
 // TODO: eventually test out of order decleration,
 // TODO: mix data and body under univeral_block
 
-data : wom_schemes
-body : inits zom_rules
+data           : zom_schemes members_decl
+body           : inits zom_rules
+zom_assertions : %empty | zom_assertions assertion
 
-wom_schemes : wom_schemes scheme | scheme
+    /* data & schemes */
+zom_schemes : zom_schemes scheme | scheme
 scheme : record_decl
        | enum_decl
 
-word_or_members : WORD | "members"
-
 are_or_is : "are" | "is"
 
-record_decl : "record" word_or_members are_or_is wom_decleration "end" "record"
+record_decl : "record" WORD are_or_is wom_decleration "end" "record"
+members_decl : "members" ARE wom_decleration "end" "members"
 
 enum_decl : WORD are_or_is "<" wom_enums ">"
 wom_enums : wom_enums "," WORD | WORD
@@ -198,6 +203,7 @@ wom_types  : wom_types "," WORD | WORD
 
 either_in_or_is : "in" | "is"
 
+    /* rules & statments */
 inits : zom_inits members_init
 
 zom_inits : %empty | zom_inits init
@@ -226,33 +232,16 @@ rule : "rule" zow_word are_or_is wom_when_blocks wom_then_blocks "end" "rule"
 wom_when_blocks : wom_when_blocks "or" when_block | when_block
 wom_then_blocks : wom_then_blocks "or" then_block | then_block
 
-when_block : "when" zow_quantifier ":" zom_determining_exprs
+when_block : "when" zow_quantifier ":" zom_dash_exprs
 
 zow_quantifier : %empty | quantifier
-zom_determining_exprs : %empty | zom_determining_exprs determining_exprs
+zom_dash_exprs : %empty | zom_dash_exprs dash_expr
 
-determining_exprs : "-" expr "."
+dash_expr : "-" expr "."
 
-then_block : "then" ":" wom_stmts {
+then_block : "then" ":" wom_stmts
 
-    // in node -> all statements in then block -> out node
-    Node then_in = Node("then in");
-    register_node(then_in);
-
-    Node then_out = Node("then out");
-    register_node(then_out);
-
-    chain( then_in , $3 );
-    int last_node_id = get_final_chain_id( then_in.id );
-    LOG( last_node_id );
-    chain( last_node_id, then_out.id );
-
-}
-wom_stmts : stmt
-    |   wom_stmts stmt {
-    chain( $1 , $$ );
-}
-
+wom_stmts : stmt |   wom_stmts stmt
 
 quantifier
   : "any"
@@ -266,62 +255,11 @@ stmt : if_stmt
      | selection_stmt "."
      | assignment "."
 
-if_stmt : "if" expr "then" wom_stmts zom_else_if zow_else "end" "if" {
-
-    Node if_start = Node("if start");
-    register_node( if_start );
-
-    Node if_end = Node("end if");
-    LOG( if_end.id );
-    register_node( if_end );
-
-    chain( if_start, $4 );
-
-    int last_node_id = get_final_chain_id( if_start.id );
-
-    auto else_ifs = $5;
-    if ( else_ifs.has_value() ) {
-        chain( last_node_id, else_ifs.value() );
-        last_node_id = get_final_chain_id( last_node_id );
-    }
-
-    auto else_stmt = $6;
-    if ( else_stmt.has_value() ) {
-        chain( last_node_id, else_stmt.value() );
-        last_node_id = get_final_chain_id( last_node_id  );
-    }
-
-    chain( last_node_id, if_end );
-    chain( if_start, if_end );
-
-    $$ = if_start;
-}
-zom_else_if : %empty { $$ = std::nullopt; }
-    | zom_else_if else_if {
-    if ( $1.has_value() ){
-        chain( $1.value() , $2 );
-        $$ = $1;
-    }
-    else {
-        $$ = $2;
-    }
-}
-
-else_if : "else" "if" expr "then" ":" wom_stmts {
-    Node else_if_node = Node("else if");
-    register_node( else_if_node );
-    $$ = else_if_node;
-
-    chain( else_if_node, $6 );
-}
-zow_else : %empty { $$ = std::nullopt; } | else
-else    : "else" ":" wom_stmts {
-    Node else_node = Node("else");
-    register_node( else_node );
-    $$ = else_node;
-
-    chain( else_node, $3 );
-}
+if_stmt : "if" expr "then" wom_stmts zom_else_if zow_else "end" "if"
+zom_else_if : %empty | zom_else_if else_if
+else_if : "else" "if" expr "then" ":" wom_stmts
+zow_else : %empty | else
+else    : "else" ":" wom_stmts
 
 selection_stmt : "for" WORD "in" expr zow_filter
                | "for" "some" WORD "in" expr zow_filter
@@ -329,11 +267,16 @@ selection_stmt : "for" WORD "in" expr zow_filter
 zow_filter : %empty | filter
 filter : "such" "that" expr
 
-assignment : name_sel "'" ":=" expr {
-    Node assign_node = Node("assignment");
-    register_node( assign_node );
-    $$ =  assign_node;
-}
+assignment : name_sel "'" ":=" expr
+
+    /* assertions & expressions */
+
+assertion : never_assertion | always_assertion
+
+never_assertion  : MUST NEVER  wom_dash_exprs END NEVER
+always_assertion : MUST ALWAYS wom_dash_exprs END ALWAYS
+
+wom_dash_exprs : dash_expr | wom_dash_exprs dash_expr
 
 expr  : equality
       | expr "and" equality
@@ -377,12 +320,9 @@ arithmatic  : term
 
 name_sel  : WORD | WORD wom_sel
 
-
-
 wom_sel : wom_sel "->" WORD | "->" WORD
 
-term  : atom
-      | "(" expr ")"
+term  : atom | "(" expr ")"
 
 structure : atom
 
@@ -399,10 +339,10 @@ structure_row : WORD ":" structure
 atom : INT
     | FLOAT
     | name_sel
-    | tuple_val {}
+    | tuple_val
     | FALSE
     | TRUE
-    | enum_val {}
+    | enum_val
 
 enum_val : name_sel "<" WORD ">"
 tuple_val : "(" wom_atom  ")"

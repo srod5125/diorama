@@ -2,8 +2,7 @@
   #include <cerrno>
   #include <climits>
   #include <cstdlib>
-  #include <string>
-  #include <string>
+  #include <string_view>
   #include <iostream>
   #include "parser.hpp"
   #include "diorama_driver.hpp"
@@ -17,6 +16,7 @@
 
 %option nodefault noyywrap nounput
 %option batch debug noinput
+%option caseless
 
 comment [/][*][^*]*[*]+([^*/][^*]*[*]+)*[/]
 word    [a-zA-Z][a-zA-Z_0-9]*
@@ -111,6 +111,8 @@ blank   [ \t]
 "is-less-than"    return yy::calcxx_parser::make_ISLT(loc);
 "between"         return yy::calcxx_parser::make_BTWN(loc);
 "or-equals"       return yy::calcxx_parser::make_XOR(loc);
+"must"            return yy::calcxx_parser::make_MUST(loc);
+"never"           return yy::calcxx_parser::make_NEVER(loc);
 ".."              return yy::calcxx_parser::make_DOTDOT(loc);
 "]"               return yy::calcxx_parser::make_RBRCKT(loc);
 "["               return yy::calcxx_parser::make_LBRCKT(loc);
@@ -144,7 +146,7 @@ blank   [ \t]
 
 {word}  {
   //TODO: return word lowered
-  return yy::calcxx_parser::make_WORD(yytext, loc);
+  return yy::calcxx_parser::make_WORD(std::string_view(yytext), loc);
 }
 
 .       { }
