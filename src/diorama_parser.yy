@@ -64,76 +64,76 @@
 
 %define api.token.prefix {TOK_}
 %token
-EOF 0      "end of file"
-H1         "#"
-H2         "##"
-H3         "###"
-H4         "####"
-H5         "#####"
-BLD        "**"
-MEMBERS    "members"
-ARE        "are"
-END        "end"
-ASSIGN     ":="
-MINUS      "-"
-PLUS       "+"
-STAR       "*"
-SLASH      "/"
-LPAREN     "("
-RPAREN     ")"
-MODULE     "module"
-IS         "is"
-RECORD     "record"
-COLON      ":"
-COMMA      ","
-GT         "<"
-LT         ">"
-PERIOD     "."
-IN         "in"
-ISSETOF    "is-set-of"
-START      "start"
-MAPS       "maps"
-TO         "to"
-FOR        "for"
-RULE       "rule"
-OR         "or"
-WHEN       "when"
-THEN       "then"
-ANY        "any"
-ALL        "all"
-AT         "at"
-MOST       "most"
-LEAST      "least"
-ALWAYS     "always"
-NEVER      "never"
-MUST       "must"
-IF         "if"
-ELSE       "else"
-SOME       "some"
-SUCH       "such"
-THAT       "that"
-TICK       "'"
-AND        "and"
-ORRATHER   "or-rather"
-NOT        "not"
-EQ         "equals"
-NOTEQ      "not-equals"
-UNION      "unions"
-INTERSECT  "intersects"
-DIFF       "differences"
-ISIN       "is-in"
-ISSUB      "is-subset"
-COMP       "compliments"
-ISGT       "is-greater-than"
-ISLT       "is-less-than"
-BTWN       "between"
-XOR        "or-equals"
-DOTDOT     ".."
-RBRCKT     "]"
-LBRCKT     "["
-ARROW      "->"
-LBRACE     "{"
-RBRACE     "}"
+EOF 0
+H1
+H2
+H3
+H4
+H5
+BLD
+MEMBERS
+ARE
+END
+ASSIGN
+DASH
+PLUS
+STAR
+SLASH
+L_PAREN
+R_PAREN
+MODULE
+IS
+RECORD
+COLON
+COMMA
+L_ANGLE_BRCKT
+R_ANGLE_BRCKT
+DOT
+IN
+ISSETOF
+START
+MAPS
+TO
+FOR
+RULE
+OR
+WHEN
+THEN
+ANY
+ALL
+AT
+MOST
+LEAST
+ALWAYS
+NEVER
+MUST
+IF
+ELSE
+SOME
+SUCH
+THAT
+TIC
+AND
+ORRATHER
+NOT
+EQ
+NOTEQ
+UNION
+INTERSECT
+DIFF
+ISIN
+ISSUB
+COMP
+ISGT
+ISLT
+BTWN
+XOR
+DOTDOT
+L_BRCKT
+R_BRCKT
+ARROW
+L_BRACE
+R_BRACE
 ;
 
 
@@ -159,7 +159,7 @@ RBRACE     "}"
 
 spec : module
 
-module :  "module" WORD "is" data body zom_assertions "end" WORD
+module :  MODULE WORD IS data body zom_assertions END WORD
 
 
 // TODO: eventually test out of order decleration,
@@ -174,34 +174,34 @@ zom_schemes : zom_schemes scheme | scheme
 scheme : record_decl
        | enum_decl
 
-are_or_is : "are" | "is"
+are_or_is : ARE | IS
 
-record_decl : "record" WORD are_or_is wom_decleration "end" "record"
-members_decl : "members" ARE wom_decleration "end" "members"
+record_decl : RECORD WORD are_or_is wom_decleration END RECORD
+members_decl : MEMBERS ARE wom_decleration END MEMBERS
 
-enum_decl : WORD are_or_is "<" wom_enums ">"
-wom_enums : wom_enums "," WORD | WORD
+enum_decl : WORD are_or_is L_ANGLE_BRCKT wom_enums R_ANGLE_BRCKT
+wom_enums : wom_enums COMMA WORD | WORD
 
 
 wom_decleration : wom_decleration declaration | declaration
 
-declaration : named_decl "."
-            | set_decl "."
-            | array_decl "."
-            | tuple_decl "."
+declaration : named_decl DOT
+            | set_decl DOT
+            | array_decl DOT
+            | tuple_decl DOT
 
-named_decl : WORD either_in_or_is WORD
-set_decl : WORD "is-set-of" WORD
+named_decl : WORD in_or_is WORD
+set_decl : WORD ISSETOF WORD
 //TODO: second word can be expression
-array_decl  : WORD "maps" WORD "to" WORD
-tuple_decl  : WORD either_in_or_is "(" wom_types ")"
+array_decl  : WORD MAPS WORD TO WORD
+tuple_decl  : WORD in_or_is L_PAREN wom_types R_PAREN
 
-wom_types  : wom_types "," WORD | WORD
+wom_types  : wom_types COMMA WORD | WORD
 
 
 //TODO: wom_elements -> wom_terms
 
-either_in_or_is : "in" | "is"
+in_or_is : IN | IS
 
     /* rules & statments */
 inits : zom_inits members_init
@@ -209,65 +209,65 @@ inits : zom_inits members_init
 zom_inits : %empty | zom_inits init
 init : struct_init | array_init
     /*TODO: basic init & array init should be unified*/
-array_init   : "start" "for" WORD "is" array_map_init "end" "start"
-struct_init  : "start" "for" WORD "is" basic_init "end" "start"
-members_init : "start" "for" "members" "is" basic_init "end" "start"
+array_init   : START FOR WORD IS array_map_init END START
+struct_init  : START FOR WORD IS basic_init END START
+members_init : START FOR MEMBERS IS basic_init END START
 
 array_map_init : wom_structure_mapping
 basic_init : wom_word_to_structure_mapping
 
-wom_structure_mapping  : wom_structure_mapping "," structure_mapping | structure_mapping
-structure_mapping : structure ":=" structure
+wom_structure_mapping  : wom_structure_mapping COMMA structure_mapping | structure_mapping
+structure_mapping : structure ASSIGN structure
 
-wom_word_to_structure_mapping : wom_word_to_structure_mapping "," word_to_structure | word_to_structure
+wom_word_to_structure_mapping : wom_word_to_structure_mapping COMMA word_to_structure | word_to_structure
 
-word_to_structure :  WORD ":=" structure
+word_to_structure :  WORD ASSIGN structure
 
 
 zom_rules : %empty | zom_rules rule
 zow_word : %empty | WORD
 
-rule : "rule" zow_word are_or_is wom_when_blocks wom_then_blocks "end" "rule"
+rule : RULE zow_word are_or_is wom_when_blocks wom_then_blocks END RULE
 
-wom_when_blocks : wom_when_blocks "or" when_block | when_block
-wom_then_blocks : wom_then_blocks "or" then_block | then_block
+wom_when_blocks : wom_when_blocks OR when_block | when_block
+wom_then_blocks : wom_then_blocks OR then_block | then_block
 
-when_block : "when" zow_quantifier ":" zom_dash_exprs
+when_block : WHEN zow_quantifier COLON zom_dash_exprs
 
 zow_quantifier : %empty | quantifier
 zom_dash_exprs : %empty | zom_dash_exprs dash_expr
 
-dash_expr : "-" expr "."
+dash_expr : DASH expr DOT
 
-then_block : "then" ":" wom_stmts
+then_block : THEN COLON wom_stmts
 
 wom_stmts : stmt |   wom_stmts stmt
 
 quantifier
-  : "any"
-  | "all"
-  | "at" "most" INT
-  | "at" "least" INT
-  | "always"
+  : ANY
+  | ALL
+  | AT MOST INT
+  | AT LEAST INT
+  | ALWAYS
 //TODO: add or equal to to at most or at least
 
 stmt : if_stmt
-     | selection_stmt "."
-     | assignment "."
+     | selection_stmt DOT
+     | assignment DOT
 
-if_stmt : "if" expr "then" wom_stmts zom_else_if zow_else "end" "if"
+if_stmt : IF expr THEN wom_stmts zom_else_if zow_else END IF
 zom_else_if : %empty | zom_else_if else_if
-else_if : "else" "if" expr "then" ":" wom_stmts
+else_if : ELSE IF expr THEN COLON wom_stmts
 zow_else : %empty | else
-else    : "else" ":" wom_stmts
+else    : ELSE COLON wom_stmts
 
-selection_stmt : "for" WORD "in" expr zow_filter
-               | "for" "some" WORD "in" expr zow_filter
-               | "for" "all" WORD "in" expr zow_filter
+selection_stmt : FOR WORD IN expr zow_filter
+               | FOR SOME WORD IN expr zow_filter
+               | FOR ALL WORD IN expr zow_filter
 zow_filter : %empty | filter
-filter : "such" "that" expr
+filter : SUCH THAT expr
 
-assignment : name_sel "'" ":=" expr
+assignment : name_sel TIC ASSIGN expr
 
     /* assertions & expressions */
 
@@ -279,61 +279,61 @@ always_assertion : MUST ALWAYS wom_dash_exprs END ALWAYS
 wom_dash_exprs : dash_expr | wom_dash_exprs dash_expr
 
 expr  : equality
-      | expr "and" equality
-      | expr "or" equality
-      | expr "or-rather" equality
-      | "not" expr
+      | expr AND equality
+      | expr OR equality
+      | expr ORRATHER equality
+      | NOT expr
 
 equality  : set_opers
-          | equality "equals" set_opers
-          | equality "not-equals" set_opers
+        | equality EQ set_opers
+          | equality NOTEQ set_opers
 
 set_opers  : membership
-           | set_opers "unions" membership
-           | set_opers "intersects" membership
-           | set_opers "differences" membership
-           | set_opers "is-in" membership
-           | set_opers "is-subset" membership
-           | "compliments" set_opers
+           | set_opers UNION membership
+           | set_opers INTERSECT membership
+           | set_opers DIFF membership
+           | set_opers ISIN membership
+           | set_opers ISSUB membership
+           | COMP set_opers
 
 membership  : arithmatic
-            | membership "is-greater-than" zow_or_equals arithmatic
-            | membership "is-less-than" zow_or_equals arithmatic
-            | membership zow_is "between" range
+            | membership ISGT zow_or_equals arithmatic
+            | membership ISLT zow_or_equals arithmatic
+            | membership zow_is BTWN range
 
-zow_is : %empty  | "is"
-zow_or_equals : %empty  | "or-equals"
+zow_is : %empty  | IS
+zow_or_equals : %empty  | XOR
 
-range : arithmatic ".." arithmatic
-      | "(" arithmatic ".." arithmatic ")"
-      | "(" arithmatic ".." arithmatic "]"
-      | "[" arithmatic ".." arithmatic ")"
-      | "[" arithmatic ".." arithmatic "]"
+range : arithmatic DOTDOT arithmatic
+      | L_PAREN arithmatic DOTDOT arithmatic R_PAREN
+      | L_PAREN arithmatic DOTDOT arithmatic R_BRCKT
+      | L_BRCKT arithmatic DOTDOT arithmatic R_PAREN
+      | L_BRCKT arithmatic DOTDOT arithmatic R_BRCKT
 
 arithmatic  : term
-            | arithmatic "+" term
-            | arithmatic "-" term
-            | arithmatic "*" term
-            | arithmatic "/" term
+            | arithmatic PLUS term  /*add*/
+            | arithmatic DASH term  /*minus*/
+            | arithmatic STAR term  /*mulitply*/
+            | arithmatic SLASH term /*divide*/
 
 // lhs & rhs name_sel
 
 name_sel  : WORD | WORD wom_sel
 
-wom_sel : wom_sel "->" WORD | "->" WORD
+wom_sel : wom_sel ARROW WORD | ARROW WORD
 
-term  : atom | "(" expr ")"
+term  : atom | L_PAREN expr R_PAREN
 
 structure : atom
 
 /*TODO: struct map*/
 /*
-      | "{" wom_structure_row "}" {
+      | L_BRACE wom_structure_row R_BRACE {
           if(driver.p == phase2) {
           }
 };
-wom_structure_row : wom_structure_row "," structure_row | structure_row
-structure_row : WORD ":" structure
+wom_structure_row : wom_structure_row COMMA structure_row | structure_row
+structure_row : WORD COLON structure
 */
 
 atom : INT
@@ -344,9 +344,9 @@ atom : INT
     | TRUE
     | enum_val
 
-enum_val : name_sel "<" WORD ">"
-tuple_val : "(" wom_atom  ")"
-wom_atom : wom_atom "," atom | atom
+enum_val : name_sel L_ANGLE_BRCKT WORD R_ANGLE_BRCKT
+tuple_val : L_PAREN wom_atom  R_PAREN
+wom_atom : wom_atom COMMA atom | atom
 
 
 //TODO: ensure members can only be declared once

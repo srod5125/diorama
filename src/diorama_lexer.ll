@@ -53,13 +53,15 @@ blank   [ \t]
 "**"          return yy::calcxx_parser::make_BLD(loc);
 
 
-"-"  return yy::calcxx_parser::make_MINUS(loc);
+"-"  return yy::calcxx_parser::make_DASH(loc);
 "+"  return yy::calcxx_parser::make_PLUS(loc);
 "*"  return yy::calcxx_parser::make_STAR(loc);
 "/"  return yy::calcxx_parser::make_SLASH(loc);
-"("  return yy::calcxx_parser::make_LPAREN(loc);
-")"  return yy::calcxx_parser::make_RPAREN(loc);
-":=" return yy::calcxx_parser::make_ASSIGN(loc);
+"("  return yy::calcxx_parser::make_L_PAREN(loc);
+")"  return yy::calcxx_parser::make_R_PAREN(loc);
+
+":="        return yy::calcxx_parser::make_ASSIGN(loc);
+"is-set-to" return yy::calcxx_parser::make_ASSIGN(loc);
 
 "module"  return yy::calcxx_parser::make_MODULE(loc);
 "is"      return yy::calcxx_parser::make_IS(loc);
@@ -69,10 +71,10 @@ blank   [ \t]
 "are"             return yy::calcxx_parser::make_ARE(loc);
 ":"               return yy::calcxx_parser::make_COLON(loc);
 ","               return yy::calcxx_parser::make_COMMA(loc);
-"<"               return yy::calcxx_parser::make_GT(loc);
-">"               return yy::calcxx_parser::make_LT(loc);
+"<"               return yy::calcxx_parser::make_L_ANGLE_BRCKT(loc);
+">"               return yy::calcxx_parser::make_R_ANGLE_BRCKT(loc);
 "members"         return yy::calcxx_parser::make_MEMBERS(loc);
-"."               return yy::calcxx_parser::make_PERIOD(loc);
+"."               return yy::calcxx_parser::make_DOT(loc);
 "in"              return yy::calcxx_parser::make_IN(loc);
 "is-set-of"       return yy::calcxx_parser::make_ISSETOF(loc);
 "start"           return yy::calcxx_parser::make_START(loc);
@@ -95,7 +97,7 @@ blank   [ \t]
 "some"            return yy::calcxx_parser::make_SOME(loc);
 "such"            return yy::calcxx_parser::make_SUCH(loc);
 "that"            return yy::calcxx_parser::make_THAT(loc);
-"'"               return yy::calcxx_parser::make_TICK(loc);
+"'"               return yy::calcxx_parser::make_TIC(loc);
 "and"             return yy::calcxx_parser::make_AND(loc);
 "or-rather"       return yy::calcxx_parser::make_ORRATHER(loc);
 "not"             return yy::calcxx_parser::make_NOT(loc);
@@ -114,11 +116,11 @@ blank   [ \t]
 "must"            return yy::calcxx_parser::make_MUST(loc);
 "never"           return yy::calcxx_parser::make_NEVER(loc);
 ".."              return yy::calcxx_parser::make_DOTDOT(loc);
-"]"               return yy::calcxx_parser::make_RBRCKT(loc);
-"["               return yy::calcxx_parser::make_LBRCKT(loc);
+"["               return yy::calcxx_parser::make_L_BRCKT(loc);
+"]"               return yy::calcxx_parser::make_R_BRCKT(loc);
 "->"              return yy::calcxx_parser::make_ARROW(loc);
-"{"               return yy::calcxx_parser::make_LBRACE(loc);
-"}"               return yy::calcxx_parser::make_RBRACE(loc);
+"{"               return yy::calcxx_parser::make_L_BRACE(loc);
+"}"               return yy::calcxx_parser::make_R_BRACE(loc);
 "false"           {
                     return yy::calcxx_parser::make_FALSE(false,loc);
                   }
