@@ -1,12 +1,12 @@
 %{
-  #include <cerrno>
   #include <climits>
-  #include <cstdlib>
-  #include <string_view>
-  #include <iostream>
+  #include <exception>
+
+  #include <cvc5/cvc5.h>
+
   #include "parser.hpp"
   #include "diorama_driver.hpp"
-
+  #include "log.hpp"
 
   #undef yywrap
   #define yywrap() 1
@@ -130,14 +130,15 @@ blank   [ \t]
 
 
 {int} {
-  errno = 0;
-  long n = strtol(yytext, NULL, 10);
+    try {
+        const int temp_int        = std::stoi(yytext);
+        const cvc5::Term cvc5_int = drv.tm->mkInteger(temp_int);
+        return yy::calcxx_parser::make_INT(cvc5_int, loc);
+    }
+    catch(const std::exception & e) {
+        LOG_ERR("Caught exception: " , e.what() );
+    }
 
-  if(!(INT_MIN <= n && n<= INT_MAX && errno != ERANGE)){
-    driver.error(loc, "integer is out of range");
-  }
-
-  return yy::calcxx_parser::make_INT(n, loc);
 }
 
 {float} {
@@ -147,11 +148,10 @@ blank   [ \t]
 }
 
 {word}  {
-  //TODO: return word lowered
-  return yy::calcxx_parser::make_WORD(std::string_view(yytext), loc);
+    return yy::calcxx_parser::make_WORD( std::string_view(yytext) , loc );
 }
 
-.       { }
+.       {LOG_ERR("invalid char: ", yytext);}
 
 <<EOF>> { return yy::calcxx_parser::make_EOF(loc); }
 

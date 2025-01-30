@@ -1,9 +1,11 @@
 
 #include <string>
+#include <memory>
+
+#include <cvc5/cvc5.h>
 
 #include "parser.hpp"
 #include "aux.hpp"
-//#include <cvc5/cvc5.h>
 
 #ifndef CALCXX_DRIVER_HPP
 #define CALCXX_DRIVER_HPP
@@ -11,14 +13,12 @@
 
 #undef YY_DECL
 #define YY_DECL \
-  yy::calcxx_parser::symbol_type yylex(calcxx_driver& driver)
+  yy::calcxx_parser::symbol_type yylex(calcxx_driver& drv)
 YY_DECL;
 
 enum PHASE {
-  phase1,
-  phase2,
-  phase3,
-  phase4,
+  collect_params,
+  check_inv,
   end
 };
 
@@ -32,6 +32,9 @@ public:
   bool trace_scanning;
   bool trace_parsing;
   PHASE p;
+
+  std::unique_ptr<cvc5::Solver>     slv;
+  std::unique_ptr<cvc5::TermManager> tm;
 
 
   // constrain solver fields
@@ -58,7 +61,7 @@ public:
   void error(const yy::location &l, const std::string &m);
   void error(const std::string &m);
 
-  void next_phase();
+  PHASE next_phase();
 
 
 };

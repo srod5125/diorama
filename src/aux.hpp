@@ -1,9 +1,7 @@
-#include <iterator>
 #include <ostream>
 #include <vector>
 #include <unordered_map>
 #include <string>
-#include <list>
 
 #ifndef AUX_HPP
 #define AUX_HPP

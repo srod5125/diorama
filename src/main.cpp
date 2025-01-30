@@ -1,43 +1,38 @@
-#include <iostream>
 #include "diorama_driver.hpp"
-
+#include "log.hpp"
 
 
 int main(int argc, char **argv)
 {
-  int res = 0;
-  calcxx_driver driver;
+    int res = 0;
+    calcxx_driver drv;
 
 
-  //TODO: implement short arg acceptor later
-  if (argc == 3) {
+    //TODO: implement short arg acceptor later
+    if (argc == 3) {
 
-    if  (argv[1] == std::string("-p")){
-      driver.trace_parsing = true;
+        if  (argv[1] == std::string("-p")){
+            drv.trace_parsing = true;
+        }
+        else if (argv[1] == std::string("-s")) {
+            drv.trace_scanning = true;
+        }
+
     }
-    else if (argv[1] == std::string("-s")) {
-      driver.trace_scanning = true;
+
+    else if (argc == 2){
+
+        do {
+            drv.parse(argv[1]);
+        } while( drv.next_phase() != end );
+
+    }
+    else {
+        LOG_ERR( "too little or too many args" );
+        LOG_ERR( "args given: " , argc );
     }
 
-
-  }
-
-  else if (argc == 2){
-
-    //for ( ; driver.p != end ; driver.next_phase() ) {
-    //}
-
-    driver.parse(argv[1]);
-    print_graph( program_structure );
-
-  }
-  else {
-    std::cout << "too little or too many args" << std::endl;
-    std::cout << "args given: " << argc << std::endl;
-
-  }
-
-  //std::cout << "res: " << driver.slv.checkSat() << std::endl;
+    //std::cout << "res: " << driver.slv.checkSat() << std::endl;
 
 
   return res;

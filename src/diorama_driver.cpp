@@ -1,24 +1,24 @@
 #include <assert.h>
 #include <iostream>
+#include <memory>
 #include "diorama_driver.hpp"
 //#include <cvc5/cvc5.h>
 
 calcxx_driver::calcxx_driver()
   : trace_scanning{false},
     trace_parsing{false},
-    p{phase1},
+    p{collect_params},
     members_declared{false},
     stmt_count{0},
     rule_count{0}
 {
-  //logic options
-  // this->tm = std::make_unique<cvc5::TermManager>();
-  // this->slv = std::make_unique<cvc5::Solver>(*this->tm);
+  // solver options
+  this->tm  = std::make_unique<cvc5::TermManager>();
+  this->slv = std::make_unique<cvc5::Solver>( *this->tm );
 
-  // this->slv->setLogic("HO_ALL");
-  // this->slv->setOption("produce-models", "true");
-  // this->slv->setOption("output", "incomplete");
-
+  this->slv->setLogic("ALL");
+  this->slv->setOption("produce-models", "true");
+  this->slv->setOption("output", "incomplete");
 
   //adding known sorts
   // this->string_sort_map["int"]  = this->tm->getIntegerSort();
@@ -60,12 +60,15 @@ void calcxx_driver::error(const std::string &m)
 //TODO: phase 0 is syntax checking phase, if fail
 //TODO: do not advance phase
 
-void calcxx_driver::next_phase(){
+PHASE calcxx_driver::next_phase(){
 
-   if ( this->p != end ){
-       this->p = (PHASE)(this->p+1);
-   }
+    PHASE current_phase = this->p;
+    if ( current_phase != end ){
+       current_phase = (PHASE)(current_phase+1);
+       this->p       = current_phase;
+    }
 
-   PHASE beyond_end = (PHASE)(end+1);
-   assert(this->p != beyond_end);
+   const PHASE beyond_end = (PHASE)(end+1);
+   assert(current_phase != beyond_end);
+   return current_phase;
 }

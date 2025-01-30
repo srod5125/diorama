@@ -15,14 +15,8 @@
 
   #include <string>
   #include <string_view>
-  #include <utility>
-  #include <variant>
-  #include <vector>
-  #include <unordered_map>
-  #include <map>
-  #include <queue>
-  #include <optional>
-  #include <tuple>
+
+  #include <cvc5/cvc5.h>
 
   #include "aux.hpp"
   #include "log.hpp"
@@ -38,14 +32,13 @@
 
 }
 
-
-%param { calcxx_driver& driver }
+%param { calcxx_driver& drv }
 
 %locations
 
 %initial-action
 {
-  @$.begin.filename = @$.end.filename = &driver.file;
+  @$.begin.filename = @$.end.filename = &drv.file;
 }
 
 %define parse.trace
@@ -139,7 +132,7 @@ R_BRACE
 
 
 %token <std::string_view> WORD
-%token <int> INT
+%token <cvc5::Term> INT
 %token <bool> FALSE TRUE
 %token FLOAT
 
@@ -357,5 +350,5 @@ wom_atom : wom_atom COMMA atom | atom
 
 void yy::calcxx_parser::error(const location &l, const std::string &m)
 {
-  driver.error(l, m);
+  drv.error(l, m);
 }
