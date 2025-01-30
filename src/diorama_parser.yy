@@ -183,7 +183,9 @@ declaration : named_decl DOT
             | array_decl DOT
             | tuple_decl DOT
 
-named_decl : WORD in_or_is WORD
+named_decl : WORD in_or_is WORD {
+
+}
 set_decl : WORD ISSETOF WORD
 //TODO: second word can be expression
 array_decl  : WORD MAPS WORD TO WORD

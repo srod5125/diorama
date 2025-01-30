@@ -7,10 +7,7 @@
 calcxx_driver::calcxx_driver()
   : trace_scanning{false},
     trace_parsing{false},
-    p{collect_params},
-    members_declared{false},
-    stmt_count{0},
-    rule_count{0}
+    p{collect_params}
 {
   // solver options
   this->tm  = std::make_unique<cvc5::TermManager>();
@@ -21,8 +18,8 @@ calcxx_driver::calcxx_driver()
   this->slv->setOption("output", "incomplete");
 
   //adding known sorts
-  // this->string_sort_map["int"]  = this->tm->getIntegerSort();
-  // this->string_sort_map["bool"] = this-e>tm->getBooleanSort();
+  this->known_sorts["int"]  = this->tm->getIntegerSort();
+  this->known_sorts["bool"] = this->tm->getBooleanSort();
 
 }
 

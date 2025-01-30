@@ -3,9 +3,11 @@
 #include <memory>
 
 #include <cvc5/cvc5.h>
+#include <unordered_map>
 
 #include "parser.hpp"
 #include "aux.hpp"
+#include "hash_info.hpp"
 
 #ifndef CALCXX_DRIVER_HPP
 #define CALCXX_DRIVER_HPP
@@ -22,8 +24,6 @@ enum PHASE {
   end
 };
 
-
-
 class calcxx_driver
 {
 public:
@@ -33,23 +33,13 @@ public:
   bool trace_parsing;
   PHASE p;
 
+  // constraint solver fields
   std::unique_ptr<cvc5::Solver>     slv;
   std::unique_ptr<cvc5::TermManager> tm;
 
 
-  // constrain solver fields
-  // std::unique_ptr<cvc5::Solver> slv;
-  // std::unique_ptr<cvc5::TermManager> tm;
-
-  // cvc5::Term members_const;
-  // cvc5::Term members_var;
-
-
-  bool members_declared;
-  // used to declare stmts
+  std::unordered_map<std::string_view, cvc5::Sort, sort_name_hash, sort_name_equal> known_sorts;
   // TODO: research if functions must have unique names
-  int stmt_count;
-  int rule_count;
 
 
   calcxx_driver();
@@ -73,26 +63,6 @@ namespace acc {
   const std::string fields = "a";
 };
 
-
-//helper struct
-/*
-struct VecStrHash {
-    std::size_t operator()(const std::vector<std::string>& v) const {
-
-        std::size_t hash1;
-
-        for (const auto& s: v) {
-          hash1 ^= std::hash<std::string>{}(s) << 1;
-        }
-
-        return hash1;
-
-    }
-    bool VecStrHash::operator==(const std::vector<std::string>& b) {
-        return false;
-    }
-};
-*/
 
 
 #endif
