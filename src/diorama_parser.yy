@@ -228,13 +228,22 @@ struct_init  : START FOR WORD IS basic_init END START
 
 members_init : START FOR MEMBERS IS basic_init END START {
 
-    const cvc5::Term pre = drv.slv->defineFun(
-        "pre-f",
-        drv.spec.members,
-        drv.known_sorts["bool"],
-        drv.tm->mkTerm(cvc5::Kind::AND, $4)
-    );
-    $$ = pre;
+    cvc5::Term pre_body =  ( $5.size() > 1 )
+        ?  drv.tm->mkTerm(cvc5::Kind::AND, $5)
+        :  $5[0]; //TODO: move not copy
+
+    if ( ! pre_body.isNull() ) {
+        const cvc5::Term pre = drv.slv->defineFun(
+            "pre-f",
+            drv.spec.members,
+            drv.known_sorts["bool"],
+            pre_body
+        );
+        $$ = pre;
+    }
+    else {
+        // TODO: handle if no pre defined
+    }
 }
 
 array_map_init : wom_structure_mapping
@@ -253,14 +262,19 @@ wom_word_to_structure_mapping : wom_word_to_structure_mapping COMMA word_to_stru
 word_to_structure :  WORD ASSIGN structure {
 
     const auto mem_name { $1 };
-    auto is_same_name = [& mem_name]( const cvc5::Term & t ){
-        return mem_name == t.getSymbol();
-    };
-    auto mem_iter = std::find_if( drv.spec.members.begin(), drv.spec.members.end() , is_same_name );
+    std::size_t mem_index = 0;
 
-    if ( mem_iter !=  drv.spec.members.end() ) {
+    //TODO: handle almost match and report to user
+    for ( const auto & t : drv.spec.members ) {
+        if ( t.getSymbol() == mem_name ) {
+            break;
+        }
+        mem_index += 1;
+    }
+
+    if ( drv.spec.members.size() > mem_index ) {
         $$ = drv.tm->mkTerm(
-            cvc5::Kind::EQUAL, { *mem_iter , $3 }
+            cvc5::Kind::EQUAL, { drv.spec.members[ mem_index ] , $3 }
         );
     }
     // finding term in memebers list, will refactor later
@@ -329,7 +343,7 @@ expr  : equality
       | NOT expr
 
 equality  : set_opers
-        | equality EQ set_opers
+          | equality EQ set_opers
           | equality NOTEQ set_opers
 
 set_opers  : membership
@@ -362,7 +376,8 @@ arithmatic  : term
 
 // lhs & rhs name_sel
 
-name_sel  : WORD | WORD wom_sel
+name_sel  : WORD
+    //    | WORD wom_sel
 
 wom_sel : wom_sel ARROW WORD | ARROW WORD
 
@@ -383,8 +398,8 @@ structure_row : WORD COLON structure
 atom : INT
      | FALSEY
      | TRUTHY
+     | name_sel
      // | FLOAT
-     // | name_sel
      // | tuple_val
      // | enum_val
 
@@ -399,7 +414,6 @@ wom_atom : wom_atom COMMA atom | atom
 
 %%
 
-void yy::calcxx_parser::error(const location &l, const std::string &m)
-{
-  drv.error(l, m);
+void yy::calcxx_parser::error(const location &l, const std::string &m) {
+    drv.error(l, m);
 }

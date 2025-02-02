@@ -12,6 +12,10 @@ void LOG_INNER(const First & first, const Args & ... args) {
     LOG_CHOP(first);
     LOG_INNER(args...);
 }
+template <typename First>
+void LOG_INNER(const First & first) {
+    LOG_CHOP(first);
+}
 template <typename First, typename... Args>
 void LOG(const First & first) {
    std::cout << "LOG: ";
