@@ -1,6 +1,7 @@
 
 #include <string>
 #include <memory>
+#include <vector>
 
 #include <cvc5/cvc5.h>
 #include <unordered_map>
@@ -24,6 +25,11 @@ enum PHASE {
   end
 };
 
+struct Spec_File {
+    std::vector<cvc5::Term> members;
+    cvc5::Term pre;
+};
+
 class calcxx_driver
 {
 public:
@@ -39,8 +45,8 @@ public:
 
 
   std::unordered_map<std::string_view, cvc5::Sort, sort_name_hash, sort_name_equal> known_sorts;
-  // TODO: research if functions must have unique names
 
+  Spec_File spec;
 
   calcxx_driver();
   virtual ~calcxx_driver();

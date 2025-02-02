@@ -19,12 +19,13 @@ int main(int argc, char **argv)
         }
 
     }
-
     else if (argc == 2){
 
-        do {
-            drv.parse(argv[1]);
-        } while( drv.next_phase() != end );
+        // do {
+        //     drv.parse(argv[1]);
+        // } while( drv.next_phase() != end );
+
+        drv.parse(argv[1]);
 
     }
     else {

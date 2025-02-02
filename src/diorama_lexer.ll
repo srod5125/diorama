@@ -121,12 +121,15 @@ blank   [ \t]
 "->"              return yy::calcxx_parser::make_ARROW(loc);
 "{"               return yy::calcxx_parser::make_L_BRACE(loc);
 "}"               return yy::calcxx_parser::make_R_BRACE(loc);
-"false"           {
-                    return yy::calcxx_parser::make_FALSE(false,loc);
-                  }
-"true"            {
-                    return yy::calcxx_parser::make_TRUE(true,loc);
-                  }
+
+"false"  {
+    const cvc5::Term f = drv.tm->mkFalse();
+    return yy::calcxx_parser::make_FALSEY(f,loc);
+}
+"true"  {
+    const cvc5::Term t = drv.tm->mkTrue();
+    return yy::calcxx_parser::make_TRUTHY(t,loc);
+}
 
 
 {int} {
@@ -144,7 +147,7 @@ blank   [ \t]
 {float} {
   //float f = std::stof(yytext);
   //return yy::calcxx_parser::make_FLOAT(f,loc);
-  yy::calcxx_parser::make_FLOAT(loc);
+  //yy::calcxx_parser::make_FLOAT(loc);
 }
 
 {word}  {

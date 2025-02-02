@@ -15,6 +15,9 @@
 
   #include <string>
   #include <string_view>
+  #include <utility>
+  #include <unordered_map>
+  #include <algorithm>
 
   #include <cvc5/cvc5.h>
 
@@ -25,8 +28,9 @@
   //since the parser is the root dependency
   //any global aliases are better placed here
 
-  // using block = std::pair< token , std::optional >
-
+  using name_term    = std::pair< std::string_view , cvc5::Term >;
+  using record_type  = std::unordered_map< std::string_view , cvc5::Term >;
+  using vec_of_terms = std::vector < cvc5::Term >;
 
   enum class quant { any, all, at_least, at_most, always };
 
@@ -56,6 +60,7 @@
 }
 
 %define api.token.prefix {TOK_}
+
 %token
 EOF 0
 H1
@@ -131,16 +136,18 @@ R_BRACE
 
 
 
-%token <std::string_view> WORD
-%token <cvc5::Term> INT
-%token <bool> FALSE TRUE
-%token FLOAT
+%token < std::string_view > WORD
+%token < cvc5::Term > INT FALSEY TRUTHY
+ // %token FLOAT
+
+%type < name_term > named_decl declaration
+%type < record_type > wom_decleration
+%type < cvc5::Term > structure atom word_to_structure
+%type < vec_of_terms > wom_word_to_structure_mapping basic_init
+%type < cvc5::Term > members_init
+
 
 /*
-%type <Node> if_stmt selection_stmt assignment
-%type <std::optional<Node>> zom_else_if zow_else
-%type <Node> else_if else
-
 %printer { yyoutput << "TODO opt"; } <std::optional<Node>>;
 %printer { yyoutput << $$.id << "TODO tos"; } <Node>;
 %printer { yyoutput << $$; } <*>;
@@ -170,21 +177,34 @@ scheme : record_decl
 are_or_is : ARE | IS
 
 record_decl : RECORD WORD are_or_is wom_decleration END RECORD
-members_decl : MEMBERS ARE wom_decleration END MEMBERS
+
+members_decl : MEMBERS ARE wom_decleration END MEMBERS {
+    for ( const auto & [ _ , term ] : $3  ) {
+        drv.spec.members.emplace_back( term );
+    }
+}
 
 enum_decl : WORD are_or_is L_ANGLE_BRCKT wom_enums R_ANGLE_BRCKT
 wom_enums : wom_enums COMMA WORD | WORD
 
 
-wom_decleration : wom_decleration declaration | declaration
+wom_decleration : wom_decleration declaration {
+    $$.insert($2);
+}
+    | declaration {
+        $$.insert($1);
+}
 
 declaration : named_decl DOT
-            | set_decl DOT
-            | array_decl DOT
-            | tuple_decl DOT
+            // | set_decl DOT
+            // | array_decl DOT
+            // | tuple_decl DOT
 
 named_decl : WORD in_or_is WORD {
-
+    if ( drv.known_sorts.contains( $3 ) ) {
+        const cvc5::Term t = drv.tm->mkVar( drv.known_sorts[$3] , std::string($1) );
+        $$ = std::make_pair( $1 , t  );
+    }
 }
 set_decl : WORD ISSETOF WORD
 //TODO: second word can be expression
@@ -203,20 +223,49 @@ inits : zom_inits members_init
 
 zom_inits : %empty | zom_inits init
 init : struct_init | array_init
-    /*TODO: basic init & array init should be unified*/
 array_init   : START FOR WORD IS array_map_init END START
 struct_init  : START FOR WORD IS basic_init END START
-members_init : START FOR MEMBERS IS basic_init END START
+
+members_init : START FOR MEMBERS IS basic_init END START {
+
+    const cvc5::Term pre = drv.slv->defineFun(
+        "pre-f",
+        drv.spec.members,
+        drv.known_sorts["bool"],
+        drv.tm->mkTerm(cvc5::Kind::AND, $4)
+    );
+    $$ = pre;
+}
 
 array_map_init : wom_structure_mapping
-basic_init : wom_word_to_structure_mapping
+basic_init : wom_word_to_structure_mapping {$$=$1;} //TODO: move not copy
 
 wom_structure_mapping  : wom_structure_mapping COMMA structure_mapping | structure_mapping
 structure_mapping : structure ASSIGN structure
 
-wom_word_to_structure_mapping : wom_word_to_structure_mapping COMMA word_to_structure | word_to_structure
+wom_word_to_structure_mapping : wom_word_to_structure_mapping COMMA word_to_structure  {
+    $$.push_back($3);
+}
+    | word_to_structure {
+    $$.push_back($1);
+}
 
-word_to_structure :  WORD ASSIGN structure
+word_to_structure :  WORD ASSIGN structure {
+
+    const auto mem_name { $1 };
+    auto is_same_name = [& mem_name]( const cvc5::Term & t ){
+        return mem_name == t.getSymbol();
+    };
+    auto mem_iter = std::find_if( drv.spec.members.begin(), drv.spec.members.end() , is_same_name );
+
+    if ( mem_iter !=  drv.spec.members.end() ) {
+        $$ = drv.tm->mkTerm(
+            cvc5::Kind::EQUAL, { *mem_iter , $3 }
+        );
+    }
+    // finding term in memebers list, will refactor later
+    // also current iter not addressing case
+}
 
 
 zom_rules : %empty | zom_rules rule
@@ -332,12 +381,12 @@ structure_row : WORD COLON structure
 */
 
 atom : INT
-    | FLOAT
-    | name_sel
-    | tuple_val
-    | FALSE
-    | TRUE
-    | enum_val
+     | FALSEY
+     | TRUTHY
+     // | FLOAT
+     // | name_sel
+     // | tuple_val
+     // | enum_val
 
 enum_val : name_sel L_ANGLE_BRCKT WORD R_ANGLE_BRCKT
 tuple_val : L_PAREN wom_atom  R_PAREN
