@@ -28,6 +28,7 @@ enum PHASE {
 struct Spec_File {
     std::vector<cvc5::Term> members;
     cvc5::Term pre;
+    cvc5::Term trans;
 };
 
 class calcxx_driver
@@ -47,6 +48,7 @@ public:
   std::unordered_map<std::string_view, cvc5::Sort, sort_name_hash, sort_name_equal> known_sorts;
 
   Spec_File spec;
+  cvc5::Term no_op;
 
   calcxx_driver();
   virtual ~calcxx_driver();
