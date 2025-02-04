@@ -2,9 +2,9 @@
 #include <string>
 #include <memory>
 #include <vector>
+#include <unordered_map>
 
 #include <cvc5/cvc5.h>
-#include <unordered_map>
 
 #include "parser.hpp"
 #include "aux.hpp"
@@ -27,6 +27,7 @@ enum PHASE {
 
 struct Spec_File {
     std::vector<cvc5::Term> members;
+    std::vector<cvc5::Term> next_members;
     cvc5::Term pre;
     cvc5::Term trans;
 };

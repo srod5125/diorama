@@ -36,10 +36,10 @@
   using vec_of_terms  = std::vector< cvc5::Term >;
   using pair_of_terms = std::pair< cvc5::Term , cvc5::Term >;
   using vec_of_pairs  = std::vector< pair_of_terms >;
-  using opt_term      = std::optional<cvc5::Term> ;
+  using opt_term      = std::optional< cvc5::Term > ;
   using quant_pair    = std::pair< quant , opt_term >;
-  using quant_opt     = std::optional< quant_pair >;
-
+  using opt_quant     = std::optional< quant_pair >;
+  using opt_bool      = std::optional< bool >;
 }
 
 %param { calcxx_driver& drv }
@@ -153,11 +153,15 @@ R_BRACE
 %type < cvc5::Term > wom_then_blocks then_block wom_stmts
 %type < cvc5::Term > members_init expr else
 %type < quant_pair > quantifier
-%type < cvc5::Term > when_block
+%type < cvc5::Term > when_block name_sel
 %type < cvc5::Term > stmt if_stmt selection_stmt assignment
 %type < vec_of_pairs > zom_else_if
 %type < pair_of_terms > else_if
-%type < opt_term > zow_else zow_quantifier
+%type < opt_term > zow_else
+%type < opt_quant > zow_quantifier
+%type < cvc5::Term > term arithmetic membership equality
+%type < cvc5::Term > set_opers
+%type < opt_bool > zow_or_equals
 
 /*
 %printer { yyoutput << "TODO opt"; } <std::optional<Node>>;
@@ -273,25 +277,9 @@ wom_word_to_structure_mapping : wom_word_to_structure_mapping COMMA word_to_stru
 }
 
 word_to_structure :  WORD ASSIGN structure {
-
-    const auto mem_name { $1 };
-    std::size_t mem_index = 0;
-
-    //TODO: handle almost match and report to user
-    for ( const auto & t : drv.spec.members ) {
-        if ( t.getSymbol() == mem_name ) {
-            break;
-        }
-        mem_index += 1;
-    }
-
-    if ( drv.spec.members.size() > mem_index ) {
-        $$ = drv.tm->mkTerm(
-            cvc5::Kind::EQUAL, { drv.spec.members[ mem_index ] , $3 }
-        );
-    }
-    // finding term in memebers list, will refactor later
-    // also current iter not addressing case
+    const std::string_view mem_name { $1 };
+    const cvc5::Term curr_mem = find_term( drv.spec.members , mem_name ).value();
+    $$ = drv.tm->mkTerm( cvc5::Kind::EQUAL, { curr_mem , $3 });
 }
 
 
@@ -325,7 +313,7 @@ when_block : WHEN zow_quantifier COLON zom_dash_exprs {
 
 }
 
-zow_quantifier : %empty { $$ = std::nullopt; } | quantifier
+zow_quantifier : %empty { $$ = std::nullopt; } | quantifier { $$ = $1; }
 zom_dash_exprs : %empty | zom_dash_exprs dash_expr
 
 dash_expr : DASH expr DOT
@@ -354,13 +342,13 @@ if_stmt : IF expr THEN wom_stmts zom_else_if zow_else END IF {
 
     // TODO: assert expr is bool sort, else throw user err
     // TODO: ensure zom_else_if is followed by zow_else,
-             if zom_else_if & zow_else doesnt throw err
+    //         if zom_else_if & zow_else doesnt throw err
     // TODO: ensure wom_stmts exists
 
-    const cvc5::Term no_op = drv.tm->mkInteger(0);
-    cvc5::Term last_else = $6.value_or( no_op );
+    const cvc5::Term no_op { drv.tm->mkFalse() };
+    cvc5::Term last_else   { $6.value_or( no_op ) };
 
-    const cvc5::Term statements_to_run =  $4;
+    const cvc5::Term statements_to_run { $4 };
 
     if ( $5.size() > 0 ) {
         cvc5::Term all_else_ifs;
@@ -389,7 +377,7 @@ zom_else_if : %empty { $$={}; } | zom_else_if else_if {
 else_if : ELSE IF expr THEN COLON wom_stmts {
     $$ = std::make_pair( $3 , $6 );
 }
-zow_else : %empty { $$=std::nullopt; } | else
+zow_else : %empty { $$=std::nullopt; } | else { $$ = $1; }
 
 else : ELSE COLON wom_stmts {
     $$ = $3;
@@ -401,7 +389,17 @@ selection_stmt : FOR WORD IN expr zow_filter
 zow_filter : %empty | filter
 filter : SUCH THAT expr
 
-assignment : name_sel TIC ASSIGN expr
+assignment : name_sel TIC ASSIGN expr {
+    const std::string next_name = $1.getSymbol() + "_next";
+    const cvc5::Sort var_sort = $1.getSort();
+    const cvc5::Term next_mem = drv.tm->mkVar( var_sort , next_name );
+
+    $$ = drv.tm->mkTerm( cvc5::Kind::EQUAL , { next_mem , $4 } );
+
+    if ( ! find_term( drv.spec.next_members , next_name ).has_value() ) {
+        drv.spec.next_members.push_back( next_mem );
+    }
+}
 
     /* assertions & expressions */
 
@@ -413,51 +411,66 @@ always_assertion : MUST ALWAYS wom_dash_exprs END ALWAYS
 wom_dash_exprs : dash_expr | wom_dash_exprs dash_expr
 
 expr  : equality
-      | expr AND equality
-      | expr OR equality
-      | expr ORRATHER equality
-      | NOT expr
+      | expr AND equality      { $$ = drv.tm->mkTerm(cvc5::Kind::AND , { $1 , $3 }); }
+      | expr OR equality       { $$ = drv.tm->mkTerm(cvc5::Kind::OR , { $1 , $3 }); }
+      | expr ORRATHER equality { $$ = drv.tm->mkTerm(cvc5::Kind::XOR , { $1 , $3 }); }
+      | NOT expr               { $$ = drv.tm->mkTerm(cvc5::Kind::NOT , { $2 }); }
 
 equality  : set_opers
-          | equality EQ set_opers
-          | equality NOTEQ set_opers
+          | equality EQ set_opers    { $$ = drv.tm->mkTerm(cvc5::Kind::EQUAL , { $1 , $3 }); }
+          | equality NOTEQ set_opers { $$ = drv.tm->mkTerm(cvc5::Kind::DISTINCT , { $1 , $3 }); }
 
 set_opers  : membership
-           | set_opers UNION membership
-           | set_opers INTERSECT membership
-           | set_opers DIFF membership
-           | set_opers ISIN membership
-           | set_opers ISSUB membership
-           | COMP set_opers
+           | set_opers UNION membership     { $$ = drv.tm->mkTerm(cvc5::Kind::SET_UNION , { $1 , $3 }); }
+           | set_opers INTERSECT membership { $$ = drv.tm->mkTerm(cvc5::Kind::SET_INTER , { $1 , $3 }); }
+           | set_opers DIFF membership      { $$ = drv.tm->mkTerm(cvc5::Kind::SET_MINUS , { $1 , $3 }); }
+           | set_opers ISIN membership      { $$ = drv.tm->mkTerm(cvc5::Kind::SET_MEMBER , { $1 , $3 }); }
+           | set_opers ISSUB membership     { $$ = drv.tm->mkTerm(cvc5::Kind::SET_SUBSET , { $1 , $3 }); }
+           | COMP set_opers                 { $$ = drv.tm->mkTerm(cvc5::Kind::SET_COMPLEMENT ,{ $2 } ); }
 
-membership  : arithmatic
-            | membership ISGT zow_or_equals arithmatic
-            | membership ISLT zow_or_equals arithmatic
-            | membership zow_is BTWN range
+membership  : arithmetic
+            | membership ISGT zow_or_equals arithmetic {
+                if ( $3.has_value() ) {
+                    $$ = drv.tm->mkTerm( cvc5::Kind::GEQ , { $1 , $4 } );
+                }
+                else {
+                    $$ = drv.tm->mkTerm( cvc5::Kind::GT , { $1 , $4 } );
+                }
+            }
+            | membership ISLT zow_or_equals arithmetic {
+                if ( $3.has_value() ) {
+                    $$ = drv.tm->mkTerm( cvc5::Kind::LEQ , { $1 , $4 } );
+                }
+                else {
+                    $$ = drv.tm->mkTerm( cvc5::Kind::LT , { $1 , $4 } );
+                }
+            }
+            // | membership zow_is BTWN range
 
 zow_is : %empty  | IS
-zow_or_equals : %empty  | XOR
+zow_or_equals : %empty { $$ = std::nullopt; } | OR EQ { $$ = true; }
 
-range : arithmatic DOTDOT arithmatic
-      | L_PAREN arithmatic DOTDOT arithmatic R_PAREN
-      | L_PAREN arithmatic DOTDOT arithmatic R_BRCKT
-      | L_BRCKT arithmatic DOTDOT arithmatic R_PAREN
-      | L_BRCKT arithmatic DOTDOT arithmatic R_BRCKT
+//TODO: range within
+range : arithmetic DOTDOT arithmetic
+      | L_PAREN arithmetic DOTDOT arithmetic R_PAREN
+      | L_PAREN arithmetic DOTDOT arithmetic R_BRCKT
+      | L_BRCKT arithmetic DOTDOT arithmetic R_PAREN
+      | L_BRCKT arithmetic DOTDOT arithmetic R_BRCKT
 
-arithmatic  : term
-            | arithmatic PLUS term  /*add*/
-            | arithmatic DASH term  /*minus*/
-            | arithmatic STAR term  /*mulitply*/
-            | arithmatic SLASH term /*divide*/
-
+arithmetic  : term
+            | arithmetic PLUS term  { $$ = drv.tm->mkTerm(cvc5::Kind::ADD , { $1 , $3 } ); }
+            | arithmetic DASH term  { $$ = drv.tm->mkTerm(cvc5::Kind::SUB , { $1 , $3 } ); }
+            | arithmetic STAR term  { $$ = drv.tm->mkTerm(cvc5::Kind::MULT , { $1 , $3 } ); }
+            | arithmetic SLASH term { $$ = drv.tm->mkTerm(cvc5::Kind::INTS_DIVISION , { $1 , $3 } ); }
+            // TODO: assert $3 cannot be 0 for div
 // lhs & rhs name_sel
 
-name_sel  : WORD
+name_sel  : WORD { $$ = find_term( drv.spec.members , $1 ).value(); }
     //    | WORD wom_sel
 
 wom_sel : wom_sel ARROW WORD | ARROW WORD
 
-term  : atom | L_PAREN expr R_PAREN
+term  : atom | L_PAREN expr R_PAREN { $$ = $2; }
 
 structure : atom
 
