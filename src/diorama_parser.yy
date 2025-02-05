@@ -151,10 +151,11 @@ R_BRACE
 %type < record_type > wom_decleration
 %type < cvc5::Term > structure atom word_to_structure
 %type < vec_of_terms > wom_word_to_structure_mapping basic_init
+%type < vec_of_terms > zom_dash_exprs
 %type < cvc5::Term > wom_then_blocks then_block wom_stmts
 %type < cvc5::Term > members_init expr else
 %type < quant_pair > quantifier
-%type < cvc5::Term > when_block name_sel
+%type < cvc5::Term > when_block name_sel dash_expr
 %type < cvc5::Term > stmt if_stmt selection_stmt assignment
 %type < vec_of_pairs > zom_else_if
 %type < pair_of_terms > else_if
@@ -325,12 +326,80 @@ when_block : WHEN zow_quantifier COLON zom_dash_exprs {
         q = $2.value().first;
     }
 
-    //TODO: eval all quants
+    //TODO: handle err where zom_dash_exprs = 0
     switch (q) {
-        case quant::any: {} break;
-        case quant::all: {} break;
-        case quant::at_least: {} break;
-        case quant::at_most: {} break;
+        case quant::any: {
+            if ( $4.size() > 1 ) {
+                $$ = drv.tm->mkTerm( cvc5::Kind::OR , $4 );
+            }
+            else {
+                $$ = $4[0];
+            }
+        } break;
+
+        case quant::all: {
+            if ( $4.size() > 1 ) {
+                $$ = drv.tm->mkTerm( cvc5::Kind::AND , $4 );
+            }
+            else {
+                $$ = $4[0];
+            }
+        } break;
+
+        case quant::at_least: {
+
+            vec_of_terms trigger_terms;
+            const cvc5::Term zero = drv.tm->mkInteger(0);
+            const cvc5::Term one  = drv.tm->mkInteger(1);
+
+            for ( const auto & e : $4 ) {
+                trigger_terms.emplace_back(
+                    drv.tm->mkTerm( cvc5::Kind::ITE,
+                    { e , one , zero } )
+                );
+            }
+
+            cvc5::Term threshhold;
+            if ( $2.has_value() ) {
+                const opt_term num = $2.value().second;
+                //TODO: handle no num ( maybe set to max for at least and 0 to at most )
+                threshhold = num.value();
+            }
+
+            $$ = drv.tm->mkTerm(
+                cvc5::Kind::GEQ,
+                { drv.tm->mkTerm( cvc5::Kind::ADD, trigger_terms ) , threshhold }
+            );
+
+        } break;
+
+        case quant::at_most: {
+
+            vec_of_terms trigger_terms;
+            const cvc5::Term zero = drv.tm->mkInteger(0);
+            const cvc5::Term one  = drv.tm->mkInteger(1);
+
+            for ( const auto & e : $4 ) {
+                trigger_terms.emplace_back(
+                    drv.tm->mkTerm( cvc5::Kind::ITE,
+                    { e , one , zero } )
+                );
+            }
+
+            cvc5::Term threshhold;
+            if ( $2.has_value() ) {
+                const opt_term num = $2.value().second;
+                //TODO: handle no num ( maybe set to max for at least and 0 to at most )
+                threshhold = num.value();
+            }
+
+            $$ = drv.tm->mkTerm(
+                cvc5::Kind::LEQ,
+                { drv.tm->mkTerm( cvc5::Kind::ADD, trigger_terms ) , threshhold }
+            );
+
+        } break;
+
         case quant::always : {
             $$ = drv.tm->mkTrue();
         } break;
@@ -341,9 +410,9 @@ when_block : WHEN zow_quantifier COLON zom_dash_exprs {
 }
 
 zow_quantifier : %empty { $$ = std::nullopt; } | quantifier { $$ = $1; }
-zom_dash_exprs : %empty | zom_dash_exprs dash_expr
+zom_dash_exprs : %empty | zom_dash_exprs dash_expr { $$.push_back( $2 ); }
 
-dash_expr : DASH expr DOT
+dash_expr : DASH expr DOT { $$ = $2; }
 
 wom_then_blocks : then_block
                 | wom_then_blocks OR then_block { $$ = drv.tm->mkTerm( cvc5::Kind::OR , { $1 , $3 } ); }
