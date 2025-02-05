@@ -31,15 +31,16 @@
 
   enum class quant { any, all, at_least, at_most, always };
 
-  using name_term     = std::pair< std::string_view , cvc5::Term >;
-  using record_type   = std::unordered_map< std::string_view , cvc5::Term >;
-  using vec_of_terms  = std::vector< cvc5::Term >;
-  using pair_of_terms = std::pair< cvc5::Term , cvc5::Term >;
-  using vec_of_pairs  = std::vector< pair_of_terms >;
-  using opt_term      = std::optional< cvc5::Term > ;
-  using quant_pair    = std::pair< quant , opt_term >;
-  using opt_quant     = std::optional< quant_pair >;
-  using opt_bool      = std::optional< bool >;
+  using name_term       = std::pair< std::string_view , cvc5::Term >;
+  using record_type     = std::unordered_map< std::string_view , cvc5::Term >;
+  using vec_of_terms    = std::vector< cvc5::Term >;
+  using pair_of_terms   = std::pair< cvc5::Term , cvc5::Term >;
+  using vec_of_pairs    = std::vector< pair_of_terms >;
+  using opt_term        = std::optional< cvc5::Term > ;
+  using quant_pair      = std::pair< quant , opt_term >;
+  using opt_quant       = std::optional< quant_pair >;
+  using opt_bool        = std::optional< bool >;
+  using opt_string_view = std::optional< std::string_view >;
 }
 
 %param { calcxx_driver& drv }
@@ -162,6 +163,7 @@ R_BRACE
 %type < cvc5::Term > term arithmetic membership equality
 %type < cvc5::Term > set_opers
 %type < opt_bool > zow_or_equals
+%type < opt_string_view > zow_word
 
 /*
 %printer { yyoutput << "TODO opt"; } <std::optional<Node>>;
@@ -282,12 +284,37 @@ word_to_structure :  WORD ASSIGN structure {
     $$ = drv.tm->mkTerm( cvc5::Kind::EQUAL, { curr_mem , $3 });
 }
 
-
 zom_rules : %empty | zom_rules rule
-zow_word : %empty | WORD
+zow_word : %empty { $$ = std::nullopt; } | WORD { $$ = $1; }
 
 rule : RULE zow_word are_or_is when_block wom_then_blocks END RULE {
 
+    //TODO: create spec scpedific rule count when no name provided
+    std::string_view rule_name = $2.value_or("");
+    std::string func_name = "trans_" + std::string( rule_name );
+
+    const cvc5::Term no_op { drv.tm->mkTrue() };
+
+    const cvc5::Term trans_body = drv.tm->mkTerm(
+        cvc5::Kind::ITE,
+        { $4 , $5 , no_op }
+    );
+
+    vec_of_terms mems_and_mems_next = drv.spec.members;
+    mems_and_mems_next.insert(
+        mems_and_mems_next.begin() ,
+        drv.spec.next_members.begin() ,
+        drv.spec.next_members.end()
+    );
+
+    const cvc5::Term trans = drv.slv->defineFun(
+        func_name,
+        mems_and_mems_next,
+        drv.known_sorts["bool"],
+        trans_body
+    );
+
+    drv.spec.trans = trans;
 }
 
 
@@ -295,7 +322,7 @@ when_block : WHEN zow_quantifier COLON zom_dash_exprs {
 
     quant q = quant::always;
     if ( $2.has_value() ) {
-        // q = $2.value().first;
+        q = $2.value().first;
     }
 
     //TODO: eval all quants
@@ -345,7 +372,7 @@ if_stmt : IF expr THEN wom_stmts zom_else_if zow_else END IF {
     //         if zom_else_if & zow_else doesnt throw err
     // TODO: ensure wom_stmts exists
 
-    const cvc5::Term no_op { drv.tm->mkFalse() };
+    const cvc5::Term no_op { drv.tm->mkTrue() };
     cvc5::Term last_else   { $6.value_or( no_op ) };
 
     const cvc5::Term statements_to_run { $4 };
