@@ -30,6 +30,10 @@ struct Spec_File {
     std::vector<cvc5::Term> next_members;
     cvc5::Term pre;
     cvc5::Term trans;
+    cvc5::Term post;
+
+    int never_count;
+    int always_count;
 };
 
 class calcxx_driver

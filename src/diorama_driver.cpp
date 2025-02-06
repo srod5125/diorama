@@ -21,6 +21,9 @@ calcxx_driver::calcxx_driver()
   this->known_sorts["int"]  = this->tm->getIntegerSort();
   this->known_sorts["bool"] = this->tm->getBooleanSort();
 
+  this->spec.never_count  = 1;
+  this->spec.always_count = 1;
+
 }
 
 calcxx_driver::~calcxx_driver()

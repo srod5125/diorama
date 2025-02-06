@@ -151,9 +151,10 @@ R_BRACE
 %type < record_type > wom_decleration
 %type < cvc5::Term > structure atom word_to_structure
 %type < vec_of_terms > wom_word_to_structure_mapping basic_init
-%type < vec_of_terms > zom_dash_exprs
+%type < vec_of_terms > zom_dash_exprs zom_assertions
 %type < cvc5::Term > wom_then_blocks then_block wom_stmts
-%type < cvc5::Term > members_init expr else
+%type < cvc5::Term > members_init expr else wom_dash_exprs
+%type < cvc5::Term > never_assertion always_assertion assertion
 %type < quant_pair > quantifier
 %type < cvc5::Term > when_block name_sel dash_expr
 %type < cvc5::Term > stmt if_stmt selection_stmt assignment
@@ -186,7 +187,7 @@ module :  MODULE WORD IS data body zom_assertions END WORD
 
 data           : zom_schemes members_decl
 body           : inits zom_rules
-zom_assertions : %empty | zom_assertions assertion
+zom_assertions : %empty | zom_assertions assertion { $$.push_back( $2 ); }
 
     /* data & schemes */
 zom_schemes : zom_schemes scheme | scheme
@@ -414,13 +415,13 @@ zom_dash_exprs : %empty | zom_dash_exprs dash_expr { $$.push_back( $2 ); }
 
 dash_expr : DASH expr DOT { $$ = $2; }
 
-wom_then_blocks : then_block
+wom_then_blocks : then_block { $$ = $1; }
                 | wom_then_blocks OR then_block { $$ = drv.tm->mkTerm( cvc5::Kind::OR , { $1 , $3 } ); }
 
 
-then_block : THEN COLON wom_stmts { $$=$3; }
+then_block : THEN COLON wom_stmts { $$ = $3; }
 
-wom_stmts : stmt | wom_stmts stmt { $$ = drv.tm->mkTerm(cvc5::Kind::AND, { $1 , $2 } ); }
+wom_stmts : stmt | wom_stmts stmt { $$ = drv.tm->mkTerm(cvc5::Kind::AND, { $1 , $2 }); }
 
 quantifier
   : ANY     { $$ = std::make_pair( quant::any , std::nullopt ); }
@@ -501,10 +502,39 @@ assignment : name_sel TIC ASSIGN expr {
 
 assertion : never_assertion | always_assertion
 
-never_assertion  : MUST NEVER  wom_dash_exprs END NEVER
-always_assertion : MUST ALWAYS wom_dash_exprs END ALWAYS
+never_assertion  : MUST NEVER wom_dash_exprs END NEVER {
 
-wom_dash_exprs : dash_expr | wom_dash_exprs dash_expr
+    const cvc5::Term post_body = drv.tm->mkTerm( cvc5::Kind::NOT , { $3 } );
+    const std::string post_name =
+        std::string("never_") + std::to_string( drv.spec.never_count );
+
+    $$ = drv.slv->defineFun(
+        post_name,
+        drv.spec.members,
+        drv.known_sorts["bool"],
+        post_body
+    );
+
+    drv.spec.never_count += 1;
+}
+always_assertion : MUST ALWAYS wom_dash_exprs END ALWAYS {
+
+    const std::string post_name =
+        std::string("always_") + std::to_string( drv.spec.always_count );
+    const cvc5::Term post_body = $3;
+
+    $$ = drv.slv->defineFun(
+        post_name,
+        drv.spec.members,
+        drv.known_sorts["bool"],
+        post_body
+    );
+
+    drv.spec.always_count += 1;
+}
+
+wom_dash_exprs : dash_expr { $$ = $1; }
+               | wom_dash_exprs dash_expr { $$ = drv.tm->mkTerm(cvc5::Kind::AND, { $1 , $2 } ); }
 
 expr  : equality
       | expr AND equality      { $$ = drv.tm->mkTerm(cvc5::Kind::AND , { $1 , $3 }); }
