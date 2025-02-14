@@ -45,6 +45,8 @@ add_executable(${PROJ}
 # settings
 set(CMAKE_C_COMPILER clang)
 set(CMAKE_CXX_COMPILER clang++)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # TODO: add if statment for release mode to compiler flags
 # set(CMAKE_BUILD_TYPE RelWithDebInfo)
@@ -57,8 +59,6 @@ target_compile_options(${PROJ} PRIVATE -Wall -Wextra)
 # link with cvc5
 target_link_libraries(${PROJ} cvc5::cvc5)
 
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
 # include(CMakePrintHelpers)

@@ -52,6 +52,8 @@ public:
 
   std::unordered_map<std::string_view, cvc5::Sort, sort_name_hash, sort_name_equal> known_sorts;
 
+  void check( );
+
   Spec_File spec;
   cvc5::Term no_op;
 

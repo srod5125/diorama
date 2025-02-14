@@ -2,6 +2,7 @@
 #include <iostream>
 #include <memory>
 #include "diorama_driver.hpp"
+#include "parser.hpp"
 //#include <cvc5/cvc5.h>
 
 calcxx_driver::calcxx_driver()
@@ -13,9 +14,12 @@ calcxx_driver::calcxx_driver()
   this->tm  = std::make_unique<cvc5::TermManager>();
   this->slv = std::make_unique<cvc5::Solver>( *this->tm );
 
-  this->slv->setLogic("ALL");
   this->slv->setOption("produce-models", "true");
-  this->slv->setOption("output", "incomplete");
+  //this->slv->setOption("output", "incomplete");
+  this->slv->setOption("incremental", "false");
+  this->slv->setOption("sygus", "true");
+
+  this->slv->setLogic("ALL");
 
   //adding known sorts
   this->known_sorts["int"]  = this->tm->getIntegerSort();
@@ -47,14 +51,20 @@ int calcxx_driver::parse(const std::string &f)
   return res;
 }
 
+void calcxx_driver::check( ) {
+    LOG("here");
+    LOG("123");
+}
+
+
 void calcxx_driver::error(const yy::location &l, const std::string &m)
 {
-  std::cerr << l << ": " << m << std::endl;
+    LOG_ERR( l , ": " , m );
 }
 
 void calcxx_driver::error(const std::string &m)
 {
-  std::cerr << "Error: " <<  m << std::endl;
+    LOG_ERR( "Error: " ,  m );
 }
 
 //TODO: phase 0 is syntax checking phase, if fail

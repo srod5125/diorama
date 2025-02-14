@@ -39,7 +39,6 @@
   using opt_term        = std::optional< cvc5::Term > ;
   using quant_pair      = std::pair< quant , opt_term >;
   using opt_quant       = std::optional< quant_pair >;
-  using opt_bool        = std::optional< bool >;
   using opt_string_view = std::optional< std::string_view >;
 }
 
@@ -164,7 +163,7 @@ R_BRACE
 %type < opt_quant > zow_quantifier
 %type < cvc5::Term > term arithmetic membership equality
 %type < cvc5::Term > set_opers
-%type < opt_bool > zow_or_equals
+%type < bool > zow_or_equals
 %type < opt_string_view > zow_word
 
 /*
@@ -179,15 +178,45 @@ R_BRACE
 
 spec : module
 
-module :  MODULE WORD IS data body zom_assertions END WORD
+module :  MODULE WORD IS data body zom_assertions END WORD {
 
+    // drv.slv->push();
+
+        cvc5::Term inv_f = drv.slv->synthFun(
+            "inv-f" ,
+            drv.spec.members ,
+            drv.known_sorts["bool"]
+        );
+
+        drv.slv->addSygusInvConstraint(
+            inv_f,
+            drv.spec.pre,
+            drv.spec.trans,
+            $6[0]
+        );
+
+        const auto res = drv.slv->checkSynth();
+        if ( res.hasSolution() ) {
+            vec_of_terms terms = { inv_f };
+            for (const auto & t :  drv.slv->getSynthSolutions(terms) ) {
+                LOG( "+ ", t );
+            }
+        }
+        else {
+            LOG("no sol");
+        }
+
+    // drv.slv->pop();
+
+}
 
 // TODO: eventually test out of order decleration,
 // TODO: mix data and body under univeral_block
 
 data           : zom_schemes members_decl
 body           : inits zom_rules
-zom_assertions : %empty | zom_assertions assertion { $$.push_back( $2 ); }
+zom_assertions : %empty { $$ = {}; }
+               | zom_assertions assertion { $$.push_back( $2 ); }
 
     /* data & schemes */
 zom_schemes : zom_schemes scheme | scheme
@@ -253,14 +282,17 @@ members_init : START FOR MEMBERS IS basic_init END START {
         ?  drv.tm->mkTerm(cvc5::Kind::AND, $5)
         :  $5[0]; //TODO: move not copy
 
+    //TODO: construct next terms here
+
     if ( ! pre_body.isNull() ) {
         const cvc5::Term pre = drv.slv->defineFun(
-            "pre-f",
+            "pre_f",
             drv.spec.members,
             drv.known_sorts["bool"],
             pre_body
         );
         $$ = pre;
+        drv.spec.pre = pre;
     }
     else {
         // TODO: handle if no pre defined
@@ -308,15 +340,13 @@ rule : RULE zow_word are_or_is when_block wom_then_blocks END RULE {
         drv.spec.next_members.begin() ,
         drv.spec.next_members.end()
     );
-
     const cvc5::Term trans = drv.slv->defineFun(
         func_name,
         mems_and_mems_next,
         drv.known_sorts["bool"],
         trans_body
     );
-
-    drv.spec.trans = trans;
+    drv.spec.trans = trans; //temp
 }
 
 
@@ -421,7 +451,8 @@ wom_then_blocks : then_block { $$ = $1; }
 
 then_block : THEN COLON wom_stmts { $$ = $3; }
 
-wom_stmts : stmt | wom_stmts stmt { $$ = drv.tm->mkTerm(cvc5::Kind::AND, { $1 , $2 }); }
+wom_stmts : stmt { $$ = $1; }
+          | wom_stmts stmt { $$ = drv.tm->mkTerm(cvc5::Kind::AND, { $1 , $2 }); }
 
 quantifier
   : ANY     { $$ = std::make_pair( quant::any , std::nullopt ); }
@@ -431,9 +462,9 @@ quantifier
   | AT LEAST INT { $$ = std::make_pair( quant::at_least , $3 ); }
 //TODO: add or equal to to at most or at least
 
-stmt : if_stmt
-     | selection_stmt DOT
-     | assignment DOT
+stmt : if_stmt            { $$ = $1; }
+     | assignment DOT     { $$ = $1; }
+     // | selection_stmt DOT { $$ = $1; }
 
 if_stmt : IF expr THEN wom_stmts zom_else_if zow_else END IF {
 
@@ -463,7 +494,7 @@ if_stmt : IF expr THEN wom_stmts zom_else_if zow_else END IF {
     else {
         $$ = drv.tm->mkTerm(
             cvc5::Kind::ITE,
-            { $2, statements_to_run , last_else }
+            { $2, statements_to_run ,  last_else }
         );
     }
 
@@ -487,15 +518,19 @@ zow_filter : %empty | filter
 filter : SUCH THAT expr
 
 assignment : name_sel TIC ASSIGN expr {
+    //TODO: err when $1 has no symbol
     const std::string next_name = $1.getSymbol() + "_next";
-    const cvc5::Sort var_sort = $1.getSort();
-    const cvc5::Term next_mem = drv.tm->mkVar( var_sort , next_name );
 
-    $$ = drv.tm->mkTerm( cvc5::Kind::EQUAL , { next_mem , $4 } );
+    opt_term next_mem = find_term( drv.spec.next_members , next_name );
+    if ( ! next_mem.has_value() ) {
+        const cvc5::Sort var_sort = $1.getSort();
+        next_mem = drv.tm->mkVar( var_sort , next_name );
 
-    if ( ! find_term( drv.spec.next_members , next_name ).has_value() ) {
-        drv.spec.next_members.push_back( next_mem );
+        drv.spec.next_members.push_back( next_mem.value() );
     }
+
+    $$ = drv.tm->mkTerm( cvc5::Kind::EQUAL , { next_mem.value() , $4 } );
+
 }
 
     /* assertions & expressions */
@@ -507,6 +542,7 @@ never_assertion  : MUST NEVER wom_dash_exprs END NEVER {
     const cvc5::Term post_body = drv.tm->mkTerm( cvc5::Kind::NOT , { $3 } );
     const std::string post_name =
         std::string("never_") + std::to_string( drv.spec.never_count );
+    drv.spec.never_count += 1;
 
     $$ = drv.slv->defineFun(
         post_name,
@@ -514,13 +550,14 @@ never_assertion  : MUST NEVER wom_dash_exprs END NEVER {
         drv.known_sorts["bool"],
         post_body
     );
-
-    drv.spec.never_count += 1;
 }
+
 always_assertion : MUST ALWAYS wom_dash_exprs END ALWAYS {
 
     const std::string post_name =
         std::string("always_") + std::to_string( drv.spec.always_count );
+    drv.spec.always_count += 1;
+
     const cvc5::Term post_body = $3;
 
     $$ = drv.slv->defineFun(
@@ -529,8 +566,6 @@ always_assertion : MUST ALWAYS wom_dash_exprs END ALWAYS {
         drv.known_sorts["bool"],
         post_body
     );
-
-    drv.spec.always_count += 1;
 }
 
 wom_dash_exprs : dash_expr { $$ = $1; }
@@ -556,7 +591,7 @@ set_opers  : membership
 
 membership  : arithmetic
             | membership ISGT zow_or_equals arithmetic {
-                if ( $3.has_value() ) {
+                if ( $3 ) {
                     $$ = drv.tm->mkTerm( cvc5::Kind::GEQ , { $1 , $4 } );
                 }
                 else {
@@ -564,7 +599,7 @@ membership  : arithmetic
                 }
             }
             | membership ISLT zow_or_equals arithmetic {
-                if ( $3.has_value() ) {
+                if ( $3 ) {
                     $$ = drv.tm->mkTerm( cvc5::Kind::LEQ , { $1 , $4 } );
                 }
                 else {
@@ -574,7 +609,8 @@ membership  : arithmetic
             // | membership zow_is BTWN range
 
 zow_is : %empty  | IS
-zow_or_equals : %empty { $$ = std::nullopt; } | OR EQ { $$ = true; }
+zow_or_equals : %empty { $$ = false; }
+              | OR EQ  { $$ = true; }
 
 //TODO: range within
 range : arithmetic DOTDOT arithmetic
@@ -596,9 +632,9 @@ name_sel  : WORD { $$ = find_term( drv.spec.members , $1 ).value(); }
 
 wom_sel : wom_sel ARROW WORD | ARROW WORD
 
-term  : atom | L_PAREN expr R_PAREN { $$ = $2; }
+term  : atom { $$ = std::move($1); } | L_PAREN expr R_PAREN { $$ = $2; }
 
-structure : atom
+structure : atom { $$ = std::move($1); }
 
 /*TODO: struct map*/
 /*
