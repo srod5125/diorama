@@ -22,6 +22,7 @@
 
   #include <cvc5/cvc5.h>
 
+  #include "hash_info.hpp"
   #include "aux.hpp"
   #include "log.hpp"
 
@@ -32,7 +33,7 @@
   enum class quant { any, all, at_least, at_most, always };
 
   using name_term       = std::pair< std::string_view , cvc5::Term >;
-  using record_type     = std::unordered_map< std::string_view , cvc5::Term >;
+  using record_type     = std::unordered_map< std::string_view , cvc5::Term , sort_name_hash, sort_name_equal >;
   using vec_of_terms    = std::vector< cvc5::Term >;
   using pair_of_terms   = std::pair< cvc5::Term , cvc5::Term >;
   using vec_of_pairs    = std::vector< pair_of_terms >;
@@ -182,30 +183,6 @@ module :  MODULE WORD IS data body zom_assertions END WORD {
 
     // drv.slv->push();
 
-        cvc5::Term inv_f = drv.slv->synthFun(
-            "inv-f" ,
-            drv.spec.members ,
-            drv.known_sorts["bool"]
-        );
-
-        drv.slv->addSygusInvConstraint(
-            inv_f,
-            drv.spec.pre,
-            drv.spec.trans,
-            $6[0]
-        );
-
-        const auto res = drv.slv->checkSynth();
-        if ( res.hasSolution() ) {
-            vec_of_terms terms = { inv_f };
-            for (const auto & t :  drv.slv->getSynthSolutions(terms) ) {
-                LOG( "+ ", t );
-            }
-        }
-        else {
-            LOG("no sol");
-        }
-
     // drv.slv->pop();
 
 }
@@ -228,9 +205,9 @@ are_or_is : ARE | IS
 record_decl : RECORD WORD are_or_is wom_decleration END RECORD
 
 members_decl : MEMBERS ARE wom_decleration END MEMBERS {
-    //TODO: refactor as vec, do move onto
-    for ( const auto & [ _ , term ] : $3  ) {
-        drv.spec.members.emplace_back( term );
+    for ( const auto & [ name , term ] : $3  ) {
+        drv.spec.members_name_id_map[ name ] = term.getId();
+        drv.spec.id_mem_map[ term.getId() ]  = term;
     }
 }
 
@@ -238,12 +215,8 @@ enum_decl : WORD are_or_is L_ANGLE_BRCKT wom_enums R_ANGLE_BRCKT
 wom_enums : wom_enums COMMA WORD | WORD
 
 
-wom_decleration : wom_decleration declaration {
-    $$.insert($2);
-}
-    | declaration {
-        $$.insert($1);
-}
+wom_decleration :   declaration { $$.insert($1); }
+                  | wom_decleration declaration { $$.insert($2); }
 
 declaration : named_decl DOT
             // | set_decl DOT
@@ -279,24 +252,10 @@ struct_init  : START FOR WORD IS basic_init END START
 members_init : START FOR MEMBERS IS basic_init END START {
 
     cvc5::Term pre_body =  ( $5.size() > 1 )
-        ?  drv.tm->mkTerm(cvc5::Kind::AND, $5)
-        :  $5[0]; //TODO: move not copy
+        ?  drv.tm->mkTerm( cvc5::Kind::AND, $5 )
+        :  $5[0];
 
-    //TODO: construct next terms here
-
-    if ( ! pre_body.isNull() ) {
-        const cvc5::Term pre = drv.slv->defineFun(
-            "pre_f",
-            drv.spec.members,
-            drv.known_sorts["bool"],
-            pre_body
-        );
-        $$ = pre;
-        drv.spec.pre = pre;
-    }
-    else {
         // TODO: handle if no pre defined
-    }
 }
 
 array_map_init : wom_structure_mapping
@@ -313,8 +272,9 @@ wom_word_to_structure_mapping : wom_word_to_structure_mapping COMMA word_to_stru
 }
 
 word_to_structure :  WORD ASSIGN structure {
-    const std::string_view mem_name { $1 };
-    const cvc5::Term curr_mem = find_term( drv.spec.members , mem_name ).value();
+    const int id = drv.spec.members_name_id_map[ $1 ];
+    const cvc5::Term curr_mem = drv.spec.id_mem_map[ id ];
+
     $$ = drv.tm->mkTerm( cvc5::Kind::EQUAL, { curr_mem , $3 });
 }
 
@@ -334,19 +294,6 @@ rule : RULE zow_word are_or_is when_block wom_then_blocks END RULE {
         { $4 , $5 , no_op }
     );
 
-    vec_of_terms mems_and_mems_next = drv.spec.members;
-    mems_and_mems_next.insert(
-        mems_and_mems_next.begin() ,
-        drv.spec.next_members.begin() ,
-        drv.spec.next_members.end()
-    );
-    const cvc5::Term trans = drv.slv->defineFun(
-        func_name,
-        mems_and_mems_next,
-        drv.known_sorts["bool"],
-        trans_body
-    );
-    drv.spec.trans = trans; //temp
 }
 
 
@@ -521,15 +468,18 @@ assignment : name_sel TIC ASSIGN expr {
     //TODO: err when $1 has no symbol
     const std::string next_name = $1.getSymbol() + "_next";
 
-    opt_term next_mem = find_term( drv.spec.next_members , next_name );
-    if ( ! next_mem.has_value() ) {
-        const cvc5::Sort var_sort = $1.getSort();
-        next_mem = drv.tm->mkVar( var_sort , next_name );
+    const int id = drv.spec.members_name_id_map[ next_name ];
 
-        drv.spec.next_members.push_back( next_mem.value() );
+    if ( ! drv.spec.id_next_members_map.contains( id ) ) {
+        const cvc5::Sort var_sort = $1.getSort();
+        const cvc5::Term next_mem = drv.tm->mkVar( var_sort , next_name );
+
+        //map the term & the next term to the same id
+        drv.spec.next_members_name_id_map[ $1.getSymbol() ] = id;
+        drv.spec.id_next_members_map[ id ] = next_mem;
     }
 
-    $$ = drv.tm->mkTerm( cvc5::Kind::EQUAL , { next_mem.value() , $4 } );
+    $$ = drv.tm->mkTerm( cvc5::Kind::EQUAL , { drv.spec.id_next_members_map[ id ] , $4 } );
 
 }
 
@@ -544,12 +494,6 @@ never_assertion  : MUST NEVER wom_dash_exprs END NEVER {
         std::string("never_") + std::to_string( drv.spec.never_count );
     drv.spec.never_count += 1;
 
-    $$ = drv.slv->defineFun(
-        post_name,
-        drv.spec.members,
-        drv.known_sorts["bool"],
-        post_body
-    );
 }
 
 always_assertion : MUST ALWAYS wom_dash_exprs END ALWAYS {
@@ -559,13 +503,6 @@ always_assertion : MUST ALWAYS wom_dash_exprs END ALWAYS {
     drv.spec.always_count += 1;
 
     const cvc5::Term post_body = $3;
-
-    $$ = drv.slv->defineFun(
-        post_name,
-        drv.spec.members,
-        drv.known_sorts["bool"],
-        post_body
-    );
 }
 
 wom_dash_exprs : dash_expr { $$ = $1; }
@@ -627,7 +564,7 @@ arithmetic  : term
             // TODO: assert $3 cannot be 0 for div
 // lhs & rhs name_sel
 
-name_sel  : WORD { $$ = find_term( drv.spec.members , $1 ).value(); }
+name_sel  : WORD { const int id = drv.spec.members_name_id_map[ $1 ]; $$ = drv.spec.id_mem_map[ id ];  }
     //    | WORD wom_sel
 
 wom_sel : wom_sel ARROW WORD | ARROW WORD

@@ -1,5 +1,4 @@
 #include <assert.h>
-#include <iostream>
 #include <memory>
 #include "diorama_driver.hpp"
 #include "parser.hpp"
