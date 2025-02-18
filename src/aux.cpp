@@ -1,3 +1,4 @@
+#include <string>
 #include <cassert>
 
 #include "aux.hpp"

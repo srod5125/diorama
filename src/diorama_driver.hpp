@@ -1,6 +1,7 @@
 
 #include <string>
 #include <memory>
+#include <vector>
 #include <unordered_map>
 
 #include <cvc5/cvc5.h>
@@ -14,7 +15,8 @@
 
 
 #undef YY_DECL
-#define YY_DECL yy::calcxx_parser::symbol_type yylex(calcxx_driver& drv)
+#define YY_DECL \
+  yy::calcxx_parser::symbol_type yylex(calcxx_driver& drv)
 YY_DECL;
 
 enum PHASE {
@@ -23,17 +25,9 @@ enum PHASE {
   end
 };
 
-using mem_name_id_map_type = std::unordered_map< std::string_view, int , sort_name_hash, sort_name_equal >;
-using id_mem_map_type      = std::unordered_map< int, cvc5::Term >;
-
-
 struct Spec_File {
-    mem_name_id_map_type members_name_id_map;
-    id_mem_map_type      id_mem_map;
-
-    mem_name_id_map_type next_members_name_id_map;
-    id_mem_map_type      id_next_members_map;
-
+    std::vector<cvc5::Term> members;
+    std::vector<cvc5::Term> next_members;
     cvc5::Term pre;
     cvc5::Term trans;
     cvc5::Term post;
