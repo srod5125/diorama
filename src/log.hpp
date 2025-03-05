@@ -26,4 +26,7 @@ void LOG_ERR (Ts && ... inputs) {
     std::cerr << "\n";
 }
 
+
+enum status { ok = 0, err = 1};
+
 #endif
