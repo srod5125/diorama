@@ -464,6 +464,8 @@ quantifier
 
 stmt : if_stmt            { $$ = $1; }
      | assignment DOT     { $$ = $1; }
+     // | skip
+     // | aborts
      // | selection_stmt DOT { $$ = $1; }
 
 if_stmt : IF expr THEN wom_stmts zom_else_if zow_else END IF {

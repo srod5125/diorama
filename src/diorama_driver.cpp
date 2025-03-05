@@ -1,14 +1,13 @@
 #include <assert.h>
-#include <iostream>
 #include <memory>
 #include "diorama_driver.hpp"
 #include "parser.hpp"
 //#include <cvc5/cvc5.h>
 
 calcxx_driver::calcxx_driver()
-  : trace_scanning{false},
-    trace_parsing{false},
-    p{collect_params}
+  : trace_scanning{ false },
+    trace_parsing{ false },
+    p{ PHASE(0) }
 {
   // solver options
   this->tm  = std::make_unique<cvc5::TermManager>();
@@ -16,7 +15,7 @@ calcxx_driver::calcxx_driver()
 
   this->slv->setOption("produce-models", "true");
   //this->slv->setOption("output", "incomplete");
-  this->slv->setOption("incremental", "false");
+  this->slv->setOption("incremental", "true");
   this->slv->setOption("sygus", "true");
 
   this->slv->setLogic("ALL");
@@ -52,7 +51,6 @@ int calcxx_driver::parse(const std::string &f)
 }
 
 void calcxx_driver::check( ) {
-    LOG("here");
     LOG("123");
 }
 
@@ -69,7 +67,7 @@ void calcxx_driver::error(const std::string &m)
 
 //TODO: phase 0 is syntax checking phase, if fail
 //TODO: do not advance phase
-
+const PHASE beyond_end = (PHASE)(end+1);
 PHASE calcxx_driver::next_phase(){
 
     PHASE current_phase = this->p;
@@ -78,7 +76,6 @@ PHASE calcxx_driver::next_phase(){
        this->p       = current_phase;
     }
 
-   const PHASE beyond_end = (PHASE)(end+1);
    assert(current_phase != beyond_end);
    return current_phase;
 }

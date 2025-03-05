@@ -20,8 +20,8 @@
 YY_DECL;
 
 enum PHASE {
-  collect_params,
-  check_inv,
+  generate_invariants,
+  hoare_checks,
   end
 };
 
