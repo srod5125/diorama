@@ -5,23 +5,6 @@ project(diorama_tb
        LANGUAGES CXX)
 
 
-# bison & flex
-find_package(BISON 3.8.2)
-bison_target(parser
-    ${CMAKE_SOURCE_DIR}/diorama_parser.yy
-    ${CMAKE_CURRENT_BINARY_DIR}/parser.cpp
-    DEFINES_FILE
-    ${CMAKE_CURRENT_BINARY_DIR}/parser.hpp)
-
-#TODO: -Wcounterexamples add option to generate bison counterexamples
-
-find_package(FLEX 2.6.4)
-flex_target(lexer
-    ${CMAKE_SOURCE_DIR}/diorama_lexer.ll
-    ${CMAKE_CURRENT_BINARY_DIR}/lexer.cpp)
-
-add_flex_bison_dependency(lexer parser)
-
 # todo add if not defined for both flex & bison files
 
 find_package(cvc5)
@@ -34,12 +17,8 @@ include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 set(PROJ "tb")
 
 add_executable(${PROJ}
-    ${CMAKE_SOURCE_DIR}/diorama_driver.cpp
-    ${CMAKE_SOURCE_DIR}/diorama_driver.hpp
-    ${CMAKE_SOURCE_DIR}/main.cpp
     ${CMAKE_SOURCE_DIR}/aux.cpp
-    ${BISON_parser_OUTPUTS}
-    ${FLEX_lexer_OUTPUTS})
+    ${CMAKE_SOURCE_DIR}/main.cpp)
 
 
 # settings
