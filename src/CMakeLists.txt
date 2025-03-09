@@ -11,14 +11,15 @@ find_package(cvc5)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# target definition
-include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
-
 set(PROJ "tb")
 
 add_executable(${PROJ}
     ${CMAKE_SOURCE_DIR}/aux.cpp
     ${CMAKE_SOURCE_DIR}/main.cpp)
+
+target_include_directories(${PROJ} PUBLIC
+    ${CMAKE_SOURCE_DIR}
+    /home/stephen/diorama/deps/include/cppcoro)
 
 
 # settings
@@ -40,8 +41,8 @@ target_link_libraries(${PROJ} cvc5::cvc5)
 
 
 
-# include(CMakePrintHelpers)
-# cmake_print_variables(CMAKE_SOURCE_DIR)
+include(CMakePrintHelpers)
+cmake_print_variables(PROJECT_SOURCE_DIR)
 
 
 # cmake -S src -B build
