@@ -4,6 +4,7 @@
 
 #include "log.hpp"
 
+#include <lexy/input/string_input.hpp>
 
 int main(int argc, char **argv)
 {
@@ -34,14 +35,13 @@ int main(int argc, char **argv)
         return status::err;
     }
 
-    std::string str;
+    std::string tmp_str;
     std::string input_file;
-    while (std::getline(ifs, str))
+    while (std::getline(ifs, tmp_str))
     {
-      input_file += str + "\n";
+      input_file += tmp_str + "\n";
     }
-
-    LOG( input_file );
+    auto input_str = lexy::string_input(input_file);
 
 
     return status::ok;
