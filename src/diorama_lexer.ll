@@ -122,21 +122,14 @@ blank   [ \t]
 "{"               return yy::calcxx_parser::make_L_BRACE(loc);
 "}"               return yy::calcxx_parser::make_R_BRACE(loc);
 
-"false"  {
-    const cvc5::Term f = drv.tm->mkFalse();
-    return yy::calcxx_parser::make_FALSEY(f,loc);
-}
-"true"  {
-    const cvc5::Term t = drv.tm->mkTrue();
-    return yy::calcxx_parser::make_TRUTHY(t,loc);
-}
+"false"           return yy::calcxx_parser::make_FALSEY(loc);
+"true"            return yy::calcxx_parser::make_TRUTHY(loc);
 
 
 {int} {
     try {
-        const int temp_int        = std::stoi(yytext);
-        const cvc5::Term cvc5_int = drv.tm->mkInteger(temp_int);
-        return yy::calcxx_parser::make_INT(cvc5_int, loc);
+        const int temp_int = std::stoi(yytext);
+        return yy::calcxx_parser::make_INT( temp_int,loc);
     }
     catch(const std::exception & e) {
         LOG_ERR("Caught exception: " , e.what() );
@@ -161,24 +154,19 @@ blank   [ \t]
 %%
 
 
-void calcxx_driver::scan_begin()
-{
-  yy_flex_debug = trace_scanning;
+void calcxx_driver::scan_begin() {
+    yy_flex_debug = trace_scanning;
 
-  if(this->file.empty() || this->file == "-"){
+    if(this->file.empty() || this->file == "-") {
+        yyin = stdin;
+    }
+    else if( ! (yyin = fopen(this->file.c_str(), "r")) ) {
+        LOG_ERR( "cannot open file: " , strerror(errno) );
+        exit(EXIT_FAILURE);
+    }
 
-    yyin = stdin;
-
-  }
-  else if(!(yyin = fopen(this->file.c_str(), "r"))) {
-
-    error("cannot open " + this->file + ": " + strerror(errno));
-    exit(EXIT_FAILURE);
-
-  }
 }
 
-void calcxx_driver::scan_end()
-{
+void calcxx_driver::scan_end() {
   fclose(yyin);
 }

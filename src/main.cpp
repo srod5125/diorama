@@ -3,6 +3,7 @@
 #include <filesystem>
 
 #include "log.hpp"
+#include "diorama_driver.hpp"
 
 
 int main(int argc, char **argv)
@@ -25,28 +26,9 @@ int main(int argc, char **argv)
         return status::err;
     }
 
-    // cite 1
-    std::ifstream ifs( argv[1] );
 
-    if ( ! ifs.is_open() )
-    {
-        LOG_ERR( "cannot open file " , argv[1] , "0_0" );
-        return status::err;
-    }
-
-    std::string tmp_str;
-    std::string input_file;
-    while (std::getline(ifs, tmp_str))
-    {
-      input_file += tmp_str + "\n";
-    }
+    calcxx_driver drv;
+    drv.parse( argv[1] );
 
     return status::ok;
 }
-
-
-
-// CITATIONS:
-// 1:
-// https://stackoverflow.com/questions/13035674/
-// how-to-read-a-file-line-by-line-or-a-whole-text-file-at-once

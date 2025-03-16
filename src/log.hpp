@@ -3,6 +3,8 @@
 #ifndef LOG_HPP
 #define LOG_HPP
 
+// TODO: add colors
+
 //CITATION: https://stackoverflow.com/questions/7230621/how-can-i-iterate-over-a-packed-variadic-template-argument-list
 template <class ... Ts>
 void LOG (Ts && ... inputs) {
@@ -18,7 +20,7 @@ void LOG (Ts && ... inputs) {
 
 template <class ... Ts>
 void LOG_ERR (Ts && ... inputs) {
-    std::cerr << "LOG: ";
+    std::cerr << "ERR: ";
     ([&]
     {
         std::cerr << inputs <<" ";

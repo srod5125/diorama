@@ -7,7 +7,6 @@
 #include <cvc5/cvc5.h>
 
 #include "parser.hpp"
-#include "aux.hpp"
 #include "hash_info.hpp"
 
 #ifndef CALCXX_DRIVER_HPP
