@@ -313,9 +313,9 @@ wom_word_to_structure_mapping : wom_word_to_structure_mapping COMMA word_to_stru
 }
 
 word_to_structure :  WORD ASSIGN structure {
-    const std::string_view mem_name { $1 };
-    const cvc5::Term curr_mem = find_term( drv.spec.members , mem_name ).value();
-    $$ = drv.tm->mkTerm( cvc5::Kind::EQUAL, { curr_mem , $3 });
+    // const std::string_view mem_name { $1 };
+    // const cvc5::Term curr_mem = find_term( drv.spec.members , mem_name ).value();
+    // $$ = drv.tm->mkTerm( cvc5::Kind::EQUAL, { curr_mem , $3 });
 }
 
 zom_rules : %empty | zom_rules rule
@@ -521,17 +521,17 @@ filter : SUCH THAT expr
 
 assignment : name_sel TIC ASSIGN expr {
     //TODO: err when $1 has no symbol
-    const std::string next_name = $1.getSymbol() + "_next";
+    // const std::string next_name = $1.getSymbol() + "_next";
 
-    opt_term next_mem = find_term( drv.spec.next_members , next_name );
-    if ( ! next_mem.has_value() ) {
-        const cvc5::Sort var_sort = $1.getSort();
-        next_mem = drv.tm->mkVar( var_sort , next_name );
+    // opt_term next_mem = find_term( drv.spec.next_members , next_name );
+    // if ( ! next_mem.has_value() ) {
+    //     const cvc5::Sort var_sort = $1.getSort();
+    //     next_mem = drv.tm->mkVar( var_sort , next_name );
 
-        drv.spec.next_members.push_back( next_mem.value() );
-    }
+    //     drv.spec.next_members.push_back( next_mem.value() );
+    // }
 
-    $$ = drv.tm->mkTerm( cvc5::Kind::EQUAL , { next_mem.value() , $4 } );
+    // $$ = drv.tm->mkTerm( cvc5::Kind::EQUAL , { next_mem.value() , $4 } );
 
 }
 
@@ -629,7 +629,7 @@ arithmetic  : term
             // TODO: assert $3 cannot be 0 for div
 // lhs & rhs name_sel
 
-name_sel  : WORD { $$ = find_term( drv.spec.members , $1 ).value(); }
+name_sel  : WORD {  }
     //    | WORD wom_sel
 
 wom_sel : wom_sel ARROW WORD | ARROW WORD

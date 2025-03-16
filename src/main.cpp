@@ -4,7 +4,6 @@
 
 #include "log.hpp"
 
-#include <lexy/input/string_input.hpp>
 
 int main(int argc, char **argv)
 {
@@ -41,8 +40,6 @@ int main(int argc, char **argv)
     {
       input_file += tmp_str + "\n";
     }
-    auto input_str = lexy::string_input(input_file);
-
 
     return status::ok;
 }
