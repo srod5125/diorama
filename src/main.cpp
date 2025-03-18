@@ -1,10 +1,13 @@
-#include <fstream>
 #include <string>
 #include <filesystem>
+#include <vector>
 
 #include "log.hpp"
 #include "diorama_driver.hpp"
+#include "aux.hpp"
 
+
+extern std::vector<spec::token> elements;
 
 int main(int argc, char **argv)
 {
@@ -29,6 +32,12 @@ int main(int argc, char **argv)
 
     calcxx_driver drv;
     drv.parse( argv[1] );
+
+
+    for ( const auto & e : elements  ) {
+        LOG( e.id , node_to_name.at( e.kind ) );
+    }
+
 
     return status::ok;
 }

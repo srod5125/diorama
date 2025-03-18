@@ -1,81 +1,37 @@
-#include <assert.h>
-#include <memory>
-#include "diorama_driver.hpp"
 #include "parser.hpp"
-//#include <cvc5/cvc5.h>
+#include "diorama_driver.hpp"
 
 calcxx_driver::calcxx_driver()
   : trace_scanning{ false },
-    trace_parsing{ false },
-    p{ PHASE(0) }
-{
-  // solver options
-  this->tm  = std::make_unique<cvc5::TermManager>();
-  this->slv = std::make_unique<cvc5::Solver>( *this->tm );
-
-  this->slv->setOption("produce-models", "true");
-  //this->slv->setOption("output", "incomplete");
-  this->slv->setOption("incremental", "true");
-  this->slv->setOption("sygus", "true");
-
-  this->slv->setLogic("ALL");
-
-  //adding known sorts
-  this->known_sorts["int"]  = this->tm->getIntegerSort();
-  this->known_sorts["bool"] = this->tm->getBooleanSort();
-
-  this->spec.never_count  = 1;
-  this->spec.always_count = 1;
-
-}
+    trace_parsing{ false }
+{}
 
 calcxx_driver::~calcxx_driver()
 {}
 
-int calcxx_driver::parse(const std::string &f)
+int calcxx_driver::parse(const std::string & f)
 {
+    this->file = f;
+    scan_begin();
 
-  this->file = f;
-  scan_begin();
+    yy::calcxx_parser parser(*this);
 
-  yy::calcxx_parser parser(*this);
+    parser.set_debug_level(trace_parsing);
 
-  parser.set_debug_level(trace_parsing);
+    int res = parser.parse();
+    // 0 if parse succeful
 
-  int res = parser.parse();
-  // 0 if parse succeful
-
-
-  scan_end();
-  return res;
-}
-
-void calcxx_driver::check( ) {
-    LOG("123");
+    scan_end();
+    return res;
 }
 
 
-void calcxx_driver::error(const yy::location &l, const std::string &m)
+void calcxx_driver::error(const yy::location & loc, const std::string & err_mes)
 {
-    LOG_ERR( l , ": " , m );
+    LOG_ERR( loc , ": " , err_mes );
 }
 
-void calcxx_driver::error(const std::string &m)
+void calcxx_driver::error(const std::string & err_mes)
 {
-    LOG_ERR( "Error: " ,  m );
-}
-
-//TODO: phase 0 is syntax checking phase, if fail
-//TODO: do not advance phase
-const PHASE beyond_end = (PHASE)(end+1);
-PHASE calcxx_driver::next_phase(){
-
-    PHASE current_phase = this->p;
-    if ( current_phase != end ){
-       current_phase = (PHASE)(current_phase+1);
-       this->p       = current_phase;
-    }
-
-   assert(current_phase != beyond_end);
-   return current_phase;
+    LOG_ERR( "Error: " ,  err_mes );
 }

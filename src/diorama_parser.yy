@@ -11,19 +11,14 @@
 
 %code requires
 {
-  class calcxx_driver;
+    class calcxx_driver;
 
-  #include <string>
-  #include <string_view>
-  #include <utility>
-  #include <unordered_map>
-  #include <algorithm>
-  #include <optional>
+    #include <string>
+    #include <string_view>
+    #include <vector>
 
-  #include <cvc5/cvc5.h>
-
-  #include "aux.hpp"
-  #include "log.hpp"
+    #include "log.hpp"
+    #include "aux.hpp"
 
 
     //since the parser is the root dependency
@@ -31,15 +26,7 @@
 
     enum class quant { any, all, at_least, at_most, always };
 
-    // using name_term       = std::pair< std::string_view , cvc5::Term >;
-    // using record_type     = std::unordered_map< std::string_view , cvc5::Term >;
-    // using vec_of_terms    = std::vector< cvc5::Term >;
-    // using pair_of_terms   = std::pair< cvc5::Term , cvc5::Term >;
-    // using vec_of_pairs    = std::vector< pair_of_terms >;
-    // using opt_term        = std::optional< cvc5::Term > ;
-    // using quant_pair      = std::pair< quant , opt_term >;
-    // using opt_quant       = std::optional< quant_pair >;
-    // using opt_string_view = std::optional< std::string_view >;
+    using namespace spec;
 }
 
 %param { calcxx_driver& drv }
@@ -56,12 +43,16 @@
 
 %code
 {
-  #include "diorama_driver.hpp"
+    #include "diorama_driver.hpp"
 
-  // zom = zero or more
-  // wom = one  or more
-  // zow = zero or won
-  // wom = one  or more
+    // zom = zero or more
+    // wom = one  or more
+    // zow = zero or won
+    // wom = one  or more
+
+    extern std::vector<spec::token> elements;
+    void add_to_elements( spec::token & t );
+
 
 }
 
@@ -142,7 +133,8 @@ L_BRACE
 R_BRACE
 ;
 
-
+%type < std::vector< int > > data body zom_assertions zom_schemes
+%type < int > scheme record_decl enum_decl members_decl
 
 %token < std::string_view > WORD
 %token < int > INT
@@ -162,17 +154,32 @@ R_BRACE
 spec : module
 
 module :  MODULE WORD IS data body zom_assertions END WORD
+{
+    spec::token t;
+    t.kind = node_kind::module;
+
+    // TODO: move vec
+    spec_parts sp;
+    sp.data         = $4;
+    sp.body         = $5;
+    sp.assertions   = $6;
+
+    t.val = sp;
+    add_to_elements( t );
+}
 
 // TODO: eventually test out of order decleration,
 // TODO: mix data and body under univeral_block
 
-data           : zom_schemes members_decl
+data           : zom_schemes members_decl { $$.push_back( $2 ); }
 body           : inits zom_rules
 zom_assertions : %empty
                | zom_assertions assertion
 
     /* data & schemes */
-zom_schemes : zom_schemes scheme | scheme
+zom_schemes : zom_schemes scheme { $$.push_back( $2 ); }
+            | scheme { std::vector< int > t; t.push_back( $1 ); $$ = t; }
+
 scheme : record_decl
        | enum_decl
 
@@ -365,10 +372,17 @@ wom_atom : wom_atom COMMA atom | atom
 
 //TODO: ensure members can only be declared once
 
-//TODO: refactor $$ = $1, to more effecient move or insert
+//TODO: move vectors
 
 %%
 
-void yy::calcxx_parser::error(const location &l, const std::string &m) {
-    drv.error(l, m);
+void yy::calcxx_parser::error(const location & loc, const std::string & err_msg)
+{
+    drv.error( loc, err_msg );
+}
+
+void add_to_elements( spec::token & t )
+{
+    t.id = elements.size();
+    elements.push_back( t );
 }
