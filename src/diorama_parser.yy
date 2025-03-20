@@ -16,6 +16,9 @@
     #include <string>
     #include <string_view>
     #include <vector>
+    #include <iterator>
+    #include <variant>
+
 
     #include "log.hpp"
     #include "aux.hpp"
@@ -23,6 +26,8 @@
 
     //since the parser is the root dependency
     //any global aliases are better placed here
+
+    using vec_of_ints = std::vector< int >;
 
     enum class quant { any, all, at_least, at_most, always };
 
@@ -51,8 +56,8 @@
     // wom = one  or more
 
     extern std::vector<spec::token> elements;
-    void add_to_elements( spec::token & t );
-
+    int add_to_elements( spec::token && t );
+    void merge_vectors( vec_of_ints & a, vec_of_ints & b );
 
 }
 
@@ -133,8 +138,16 @@ L_BRACE
 R_BRACE
 ;
 
-%type < std::vector< int > > data body zom_assertions zom_schemes
-%type < int > scheme record_decl enum_decl members_decl
+%type < vec_of_ints > data body zom_assertions
+%type < vec_of_ints > zom_schemes inits zom_rules
+%type < vec_of_ints > zom_inits wom_word_to_structure_mapping
+%type < vec_of_ints > wom_decleration basic_init
+%type < std::vector< std::string > > wom_enums
+%type < int > scheme record_def enum_def members_def
+%type < int > assertion declaration named_decl init
+%type < int > members_init word_to_structure
+%type < spec::atom_var > atom structure
+%type < std::string > name_sel
 
 %token < std::string_view > WORD
 %token < int > INT
@@ -165,43 +178,75 @@ module :  MODULE WORD IS data body zom_assertions END WORD
     sp.assertions   = $6;
 
     t.val = sp;
-    add_to_elements( t );
+    add_to_elements( std::move(t) );
 }
 
 // TODO: eventually test out of order decleration,
 // TODO: mix data and body under univeral_block
 
-data           : zom_schemes members_decl { $$.push_back( $2 ); }
-body           : inits zom_rules
-zom_assertions : %empty
-               | zom_assertions assertion
+data           : zom_schemes members_def { $$.push_back( $2 ); }
+body           : inits zom_rules { merge_vectors( $1 , $2 ); }
+zom_assertions : %empty { vec_of_ints t; $$ = t; }
+               | zom_assertions assertion { $$.push_back( $2 ); }
 
     /* data & schemes */
 zom_schemes : zom_schemes scheme { $$.push_back( $2 ); }
-            | scheme { std::vector< int > t; t.push_back( $1 ); $$ = t; }
+            | scheme { vec_of_ints t; t.push_back( $1 ); $$ = t; }
 
-scheme : record_decl
-       | enum_decl
+scheme : record_def
+       | enum_def
 
 are_or_is : ARE | IS
 
-record_decl : RECORD WORD are_or_is wom_decleration END RECORD
+record_def : RECORD WORD are_or_is wom_decleration END RECORD {
+    spec::token t;
 
-members_decl : MEMBERS ARE wom_decleration END MEMBERS
+    t.kind = record_def;
+    t.children = std::move( $4 );
+    t.name = std::string( $2 );
 
-enum_decl : WORD are_or_is L_ANGLE_BRCKT wom_enums R_ANGLE_BRCKT
-wom_enums : wom_enums COMMA WORD | WORD
+    $$ = add_to_elements( std::move(t) );
+}
 
+members_def : MEMBERS ARE wom_decleration END MEMBERS {
+    spec::token t;
 
-wom_decleration : wom_decleration declaration
-                | declaration
+    t.kind = members_def;
+    t.children = std::move( $3 );
 
-declaration : named_decl DOT
+    $$ = add_to_elements( std::move(t) );
+}
+
+enum_def : WORD are_or_is L_ANGLE_BRCKT wom_enums R_ANGLE_BRCKT {
+    spec::token t;
+    t.name = std::string( $1 );
+    t.kind = enum_def;
+    t.val = std::move( $4 );
+
+    $$ = add_to_elements( std::move(t) );
+}
+wom_enums   : wom_enums COMMA WORD { $$.emplace_back( std::string($3) ); }
+            | WORD { std::vector< std::string > t; t.emplace_back( std::string($1) ); $$=t; }
+
+wom_decleration : wom_decleration declaration { $$.push_back( $2 ); }
+                | declaration { vec_of_ints t; t.push_back( $1 ); $$ = t; }
+
+declaration : named_decl DOT { $$ = $1; }
             // | set_decl DOT
             // | array_decl DOT
             // | tuple_decl DOT
 
-named_decl : WORD in_or_is WORD
+named_decl : WORD in_or_is WORD {
+    std::pair< std::string, std::string > var_val_pair;
+    var_val_pair.first  = std::string( $1 );
+    var_val_pair.second = std::string( $3 );
+
+    spec::token t;
+    t.kind = named_decl;
+    t.val  = var_val_pair;
+
+    $$ = add_to_elements( std::move(t) );
+}
 set_decl : WORD ISSETOF WORD
 //TODO: second word can be expression
 array_decl  : WORD MAPS WORD TO WORD
@@ -217,15 +262,24 @@ in_or_is : IN | IS
     /* rules & statments */
 inits : zom_inits members_init
 
-zom_inits : %empty | zom_inits init
+zom_inits   : %empty { vec_of_ints t; $$ = t; }
+            | zom_inits init { $$.push_back( $2 ); }
 init : struct_init | array_init
 array_init   : START FOR WORD IS array_map_init END START
 struct_init  : START FOR WORD IS basic_init END START
 
-members_init : START FOR MEMBERS IS basic_init END START
+members_init : START FOR MEMBERS IS basic_init END START {
+    spec::token t;
+    t.name = "members";
+    t.kind = members_init;
+
+    t.children = std::move( $5 );
+
+    $$ = add_to_elements( std::move(t) );
+}
 
 array_map_init : wom_structure_mapping
-basic_init : wom_word_to_structure_mapping
+basic_init : wom_word_to_structure_mapping { $$ = $1; }
 
 wom_structure_mapping  : wom_structure_mapping COMMA structure_mapping | structure_mapping
 structure_mapping : structure ASSIGN structure
@@ -233,7 +287,17 @@ structure_mapping : structure ASSIGN structure
 wom_word_to_structure_mapping : wom_word_to_structure_mapping COMMA word_to_structure
                               | word_to_structure
 
-word_to_structure :  WORD ASSIGN structure
+word_to_structure :  WORD ASSIGN structure {
+    spec::token t;
+    t.name = std::string( $1 );
+
+    t.kind = word_to_struct;
+    t.val = $3;
+
+    $$ = add_to_elements( std::move(t) );
+}
+
+structure : atom { $$=$1; }
 
 zom_rules : %empty | zom_rules rule
 zow_word : %empty | WORD
@@ -338,14 +402,13 @@ arithmetic  : term
             // TODO: assert $3 cannot be 0 for div
 // lhs & rhs name_sel
 
-name_sel  : WORD
+name_sel  : WORD { $$ = std::string( $1 ); }
     //    | WORD wom_sel
 
 wom_sel : wom_sel ARROW WORD | ARROW WORD
 
-term  : atom | L_PAREN expr R_PAREN
-
-structure : atom
+term    : atom
+        | L_PAREN expr R_PAREN
 
 /*TODO: struct map*/
 /*
@@ -357,10 +420,10 @@ wom_structure_row : wom_structure_row COMMA structure_row | structure_row
 structure_row : WORD COLON structure
 */
 
-atom : INT
-     | FALSEY
-     | TRUTHY
-     | name_sel
+atom    : INT      { $$ = $1; }
+        | FALSEY   { $$ = false; }
+        | TRUTHY   { $$ = true; }
+        | name_sel { $$ = std::move( $1 ); }
      // | FLOAT
      // | tuple_val
      // | enum_val
@@ -381,8 +444,17 @@ void yy::calcxx_parser::error(const location & loc, const std::string & err_msg)
     drv.error( loc, err_msg );
 }
 
-void add_to_elements( spec::token & t )
+int add_to_elements( spec::token && t )
 {
     t.id = elements.size();
-    elements.push_back( t );
+    elements.emplace_back( t );
+    return t.id;
+}
+void merge_vectors( vec_of_ints & a, vec_of_ints & b )
+{
+    a.insert(
+        a.end(),
+        std::make_move_iterator(b.begin()),
+        std::make_move_iterator(b.end())
+    );
 }

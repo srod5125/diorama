@@ -4,7 +4,9 @@
 #include <vector>
 #include <unordered_map>
 #include <string_view>
+#include <string>
 #include <variant>
+#include <utility>
 
 
 namespace spec
@@ -13,7 +15,13 @@ namespace spec
     enum node_kind
     {
         module,
-        add
+        named_decl,
+        record_def,
+        members_def,
+        enum_def,
+        members_init,
+        word_to_struct,
+        int_val
     };
 
     struct spec_parts
@@ -23,19 +31,36 @@ namespace spec
         std::vector< int > assertions;
     };
 
+    using atom_var = std::variant<
+        spec_parts,
+        std::pair< std::string, std::string >,
+        std::vector< std::string >,
+        int,
+        bool,
+        std::string
+    > ;
+
     struct token
     {
         int id;
         node_kind kind;
-        std::vector<int> children;
+        std::vector< int > children;
+        std::string name;
 
-        std::variant< spec_parts > val;
+        atom_var val;
+
     };
 }
 
 const std::unordered_map< spec::node_kind , std::string_view > node_to_name = {
-    { spec::node_kind::module , "module" },
-    { spec::node_kind::add , "add" },
+    { spec::node_kind::module     , "module" },
+    { spec::node_kind::named_decl , "named_decl" },
+    { spec::node_kind::members_def , "members_def" },
+    { spec::node_kind::record_def , "record_def" },
+    { spec::node_kind::enum_def , "enum_def" },
+    { spec::node_kind::members_init , "members_init" },
+    { spec::node_kind::word_to_struct , "word_to_struct" },
+    { spec::node_kind::int_val , "int_val" },
 };
 
 extern std::vector<spec::token> elements;

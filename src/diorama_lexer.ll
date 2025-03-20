@@ -128,8 +128,8 @@ blank   [ \t]
 
 {int} {
     try {
-        const int temp_int = std::stoi(yytext);
-        return yy::calcxx_parser::make_INT( temp_int,loc);
+        const int temp_int = std::stoi( yytext );
+        return yy::calcxx_parser::make_INT( temp_int, loc );
     }
     catch(const std::exception & e) {
         LOG_ERR("Caught exception: " , e.what() );
