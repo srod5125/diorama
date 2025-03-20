@@ -12,8 +12,11 @@
 namespace spec
 {
 
+    enum class quant { any, all, at_least, at_most, always };
+
     enum node_kind
     {
+        unkown,
         module,
         named_decl,
         record_def,
@@ -21,7 +24,9 @@ namespace spec
         enum_def,
         members_init,
         word_to_struct,
-        int_val
+        int_val,
+        rule,
+        when_block
     };
 
     struct spec_parts
@@ -37,23 +42,30 @@ namespace spec
         std::vector< std::string >,
         int,
         bool,
-        std::string
+        std::string,
+        std::pair< quant, int >
     > ;
 
     struct token
     {
         int id;
-        node_kind kind;
+        node_kind kind = unkown;
         std::vector< int > children;
         std::string name;
 
         atom_var val;
 
+        token( );
+        token( node_kind kind );
+        token( node_kind kind , std::string & name );
+        token( node_kind kind , std::string && name );
+
     };
 }
 
 const std::unordered_map< spec::node_kind , std::string_view > node_to_name = {
-    { spec::node_kind::module     , "module" },
+    { spec::node_kind::unkown , "unkown" },
+    { spec::node_kind::module , "module" },
     { spec::node_kind::named_decl , "named_decl" },
     { spec::node_kind::members_def , "members_def" },
     { spec::node_kind::record_def , "record_def" },
@@ -61,6 +73,8 @@ const std::unordered_map< spec::node_kind , std::string_view > node_to_name = {
     { spec::node_kind::members_init , "members_init" },
     { spec::node_kind::word_to_struct , "word_to_struct" },
     { spec::node_kind::int_val , "int_val" },
+    { spec::node_kind::rule , "rule" },
+    { spec::node_kind::when_block , "when_block" },
 };
 
 extern std::vector<spec::token> elements;

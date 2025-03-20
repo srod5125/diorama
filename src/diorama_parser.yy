@@ -18,6 +18,7 @@
     #include <vector>
     #include <iterator>
     #include <variant>
+    #include <utility>
 
 
     #include "log.hpp"
@@ -28,8 +29,7 @@
     //any global aliases are better placed here
 
     using vec_of_ints = std::vector< int >;
-
-    enum class quant { any, all, at_least, at_most, always };
+    using quant_int = std::pair< spec::quant, int >;
 
     using namespace spec;
 }
@@ -145,13 +145,15 @@ R_BRACE
 %type < std::vector< std::string > > wom_enums
 %type < int > scheme record_def enum_def members_def
 %type < int > assertion declaration named_decl init
-%type < int > members_init word_to_structure
+%type < int > members_init word_to_structure rule
 %type < spec::atom_var > atom structure
 %type < std::string > name_sel
+%type < vec_of_ints > wom_then_blocks
+%type < int > when_block then_block
+%type < quant_int > quantifier
 
 %token < std::string_view > WORD
 %token < int > INT
- // %token FLOAT
 
 
 /*
@@ -168,16 +170,15 @@ spec : module
 
 module :  MODULE WORD IS data body zom_assertions END WORD
 {
-    spec::token t;
-    t.kind = node_kind::module;
+    spec::token t = spec::token( node_kind::module );
 
     // TODO: move vec
     spec_parts sp;
-    sp.data         = $4;
-    sp.body         = $5;
-    sp.assertions   = $6;
+    sp.data         = std::move( $4 );
+    sp.body         = std::move( $5 );
+    sp.assertions   = std::move( $6 );
 
-    t.val = sp;
+    t.val = std::move( sp );
     add_to_elements( std::move(t) );
 }
 
@@ -199,28 +200,20 @@ scheme : record_def
 are_or_is : ARE | IS
 
 record_def : RECORD WORD are_or_is wom_decleration END RECORD {
-    spec::token t;
-
-    t.kind = record_def;
+    spec::token t = spec::token( node_kind::record_def , std::string( $2 ) );
     t.children = std::move( $4 );
-    t.name = std::string( $2 );
-
     $$ = add_to_elements( std::move(t) );
 }
 
 members_def : MEMBERS ARE wom_decleration END MEMBERS {
-    spec::token t;
-
-    t.kind = members_def;
+    spec::token t = spec::token( node_kind::members_def );
     t.children = std::move( $3 );
 
     $$ = add_to_elements( std::move(t) );
 }
 
 enum_def : WORD are_or_is L_ANGLE_BRCKT wom_enums R_ANGLE_BRCKT {
-    spec::token t;
-    t.name = std::string( $1 );
-    t.kind = enum_def;
+    spec::token t = spec::token( node_kind::enum_def , std::string( $1 ) );
     t.val = std::move( $4 );
 
     $$ = add_to_elements( std::move(t) );
@@ -241,8 +234,7 @@ named_decl : WORD in_or_is WORD {
     var_val_pair.first  = std::string( $1 );
     var_val_pair.second = std::string( $3 );
 
-    spec::token t;
-    t.kind = named_decl;
+    spec::token t = spec::token( node_kind::named_decl );
     t.val  = var_val_pair;
 
     $$ = add_to_elements( std::move(t) );
@@ -259,20 +251,18 @@ wom_types  : wom_types COMMA WORD | WORD
 
 in_or_is : IN | IS
 
-    /* rules & statments */
 inits : zom_inits members_init
 
 zom_inits   : %empty { vec_of_ints t; $$ = t; }
             | zom_inits init { $$.push_back( $2 ); }
+
 init : struct_init | array_init
 array_init   : START FOR WORD IS array_map_init END START
 struct_init  : START FOR WORD IS basic_init END START
 
 members_init : START FOR MEMBERS IS basic_init END START {
-    spec::token t;
+    spec::token t = spec::token( node_kind::members_init );
     t.name = "members";
-    t.kind = members_init;
-
     t.children = std::move( $5 );
 
     $$ = add_to_elements( std::move(t) );
@@ -288,9 +278,7 @@ wom_word_to_structure_mapping : wom_word_to_structure_mapping COMMA word_to_stru
                               | word_to_structure
 
 word_to_structure :  WORD ASSIGN structure {
-    spec::token t;
-    t.name = std::string( $1 );
-
+    spec::token t = spec::token( node_kind::word_to_struct , std::string( $1 ) );
     t.kind = word_to_struct;
     t.val = $3;
 
@@ -299,21 +287,30 @@ word_to_structure :  WORD ASSIGN structure {
 
 structure : atom { $$=$1; }
 
-zom_rules : %empty | zom_rules rule
-zow_word : %empty | WORD
+zom_rules   : %empty { vec_of_ints t; $$ = t; }
+            | zom_rules rule { $$.push_back( $2 ); }
 
-rule : RULE zow_word are_or_is when_block wom_then_blocks END RULE
+rule : RULE WORD are_or_is when_block wom_then_blocks END RULE {
+    spec::token t = spec::token( node_kind::rule , std::string( $2 ) );
+    // first child is when block, rest are then blocks
+    t.children.push_back( $4 );
+    merge_vectors( t.children , $5 );
+
+    $$ = add_to_elements( std::move(t) );
+}
 
 
-when_block : WHEN zow_quantifier COLON zom_dash_exprs
+when_block : WHEN quantifier COLON zom_dash_exprs {
+    spec::token t = spec::token( node_kind::when_block );
+    t.val = $2;
+}
 
-zow_quantifier : %empty  | quantifier
 zom_dash_exprs : %empty | zom_dash_exprs dash_expr
 
 dash_expr : DASH expr DOT
 
-wom_then_blocks : then_block
-                | wom_then_blocks OR then_block
+wom_then_blocks : then_block { $$.push_back( $1 ); }
+                | wom_then_blocks OR then_block { $$.push_back( $3 ); }
 
 
 then_block : THEN COLON wom_stmts
@@ -322,11 +319,11 @@ wom_stmts : stmt
           | wom_stmts stmt
 
 quantifier
-  : ANY
-  | ALL
-  | ALWAYS
-  | AT MOST INT
-  | AT LEAST INT
+  : ANY             { $$ = std::make_pair( quant::any, 0 ); }
+  | ALL             { $$ = std::make_pair( quant::all, 0 ); }
+  | ALWAYS          { $$ = std::make_pair( quant::always, 0 ); }
+  | AT MOST INT     { $$ = std::make_pair( quant::at_most, $3 ); }
+  | AT LEAST INT    { $$ = std::make_pair( quant::at_least, $3 ); }
 //TODO: add or equal to to at most or at least
 
 stmt : if_stmt
@@ -450,6 +447,7 @@ int add_to_elements( spec::token && t )
     elements.emplace_back( t );
     return t.id;
 }
+//  second vector is consumed
 void merge_vectors( vec_of_ints & a, vec_of_ints & b )
 {
     a.insert(
