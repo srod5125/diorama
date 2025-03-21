@@ -26,7 +26,13 @@ namespace spec
         word_to_struct,
         int_val,
         rule,
-        when_block
+        when_block,
+        t_and, t_or, t_xor, t_not,
+        t_equal, t_not_equal,
+        t_union, t_intersect, t_diff, t_isin, t_issub, t_compliment,
+        t_gt, t_gtoe, t_lt, t_ltoe,
+        t_add , t_minus , t_multiply, t_divide , t_negative,
+        atom
     };
 
     struct spec_parts
@@ -74,7 +80,28 @@ const std::unordered_map< spec::node_kind , std::string_view > node_to_name = {
     { spec::node_kind::word_to_struct , "word_to_struct" },
     { spec::node_kind::int_val , "int_val" },
     { spec::node_kind::rule , "rule" },
-    { spec::node_kind::when_block , "when_block" },
+    { spec::node_kind::t_and , "and" },
+    { spec::node_kind::t_or , "or" },
+    { spec::node_kind::t_xor , "xor" },
+    { spec::node_kind::t_not , "not" },
+    { spec::node_kind::t_equal , "equal" },
+    { spec::node_kind::t_not_equal , "not_equal" },
+    { spec::node_kind::t_union , "union" },
+    { spec::node_kind::t_intersect , "intersect" },
+    { spec::node_kind::t_diff , "diff" },
+    { spec::node_kind::t_isin , "isin" },
+    { spec::node_kind::t_issub , "issub" },
+    { spec::node_kind::t_compliment , "compliment" },
+    { spec::node_kind::t_gt , "greater than" },
+    { spec::node_kind::t_gtoe , "greater than or equal" },
+    { spec::node_kind::t_lt , "less than" },
+    { spec::node_kind::t_ltoe , "less than or equal" },
+    { spec::node_kind::t_add , "t_add" },
+    { spec::node_kind::t_minus , "t_minus" },
+    { spec::node_kind::t_multiply , "t_multiply" },
+    { spec::node_kind::t_divide , "t_divide" },
+    { spec::node_kind::t_negative , "t_negative" },
+    { spec::node_kind::atom , "atom" },
 };
 
 extern std::vector<spec::token> elements;

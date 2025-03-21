@@ -57,6 +57,8 @@
 
     extern std::vector<spec::token> elements;
     int add_to_elements( spec::token && t );
+    int add_binop( node_kind op, const vec_of_ints & params );
+    int add_unop( node_kind op, int node );
     void merge_vectors( vec_of_ints & a, vec_of_ints & b );
 
 }
@@ -151,6 +153,12 @@ R_BRACE
 %type < vec_of_ints > wom_then_blocks
 %type < int > when_block then_block
 %type < quant_int > quantifier
+%type < vec_of_ints > zom_dash_exprs wom_dash_exprs
+%type < int > dash_expr expr equality
+%type < int > set_opers membership arithmetic term
+%type < bool > zow_or_equals
+
+
 
 %token < std::string_view > WORD
 %token < int > INT
@@ -303,11 +311,15 @@ rule : RULE WORD are_or_is when_block wom_then_blocks END RULE {
 when_block : WHEN quantifier COLON zom_dash_exprs {
     spec::token t = spec::token( node_kind::when_block );
     t.val = $2;
+    t.children = std::move( $4 );
+
+    $$ = add_to_elements( std::move(t) );
 }
 
-zom_dash_exprs : %empty | zom_dash_exprs dash_expr
+zom_dash_exprs  : %empty { vec_of_ints t; $$ = t; }
+                | zom_dash_exprs dash_expr { $$.push_back( $2 ); }
 
-dash_expr : DASH expr DOT
+dash_expr : DASH expr DOT { $$ = $2; }
 
 wom_then_blocks : then_block { $$.push_back( $1 ); }
                 | wom_then_blocks OR then_block { $$.push_back( $3 ); }
@@ -354,35 +366,41 @@ never_assertion  : MUST NEVER wom_dash_exprs END NEVER
 
 always_assertion : MUST ALWAYS wom_dash_exprs END ALWAYS
 
-wom_dash_exprs : dash_expr
-               | wom_dash_exprs dash_expr
+wom_dash_exprs : dash_expr { $$.push_back( $1 ); }
+               | wom_dash_exprs dash_expr { $$.push_back( $2 ); }
 
-expr  : equality
-      | expr AND equality
-      | expr OR equality
-      | expr ORRATHER equality
-      | NOT expr
+expr  : equality { $$ = $1; }
+      | expr AND equality { $$ = add_binop( node_kind::t_and , { $1 , $3 } ); }
+      | expr OR equality { $$ = add_binop( node_kind::t_or , { $1 , $3 }); }
+      | expr ORRATHER equality { $$ = add_binop( node_kind::t_xor , { $1 , $3 }); }
+      | NOT expr { $$ = add_unop( node_kind::t_not , $2 ); }
 
-equality  : set_opers
-          | equality EQ set_opers
-          | equality NOTEQ set_opers
+equality  : set_opers { $$ = $1; }
+          | equality EQ set_opers { $$ = add_binop( node_kind::t_equal , { $1 , $3 } ); }
+          | equality NOTEQ set_opers { $$ = add_binop( node_kind::t_not_equal , { $1 , $3 } ); }
 
-set_opers  : membership
-           | set_opers UNION membership
-           | set_opers INTERSECT membership
-           | set_opers DIFF membership
-           | set_opers ISIN membership
-           | set_opers ISSUB membership
-           | COMP set_opers
+set_opers  : membership { $$ = $1; }
+           | set_opers UNION membership { $$ = add_binop( node_kind::t_union , { $1 , $3 } ); }
+           | set_opers INTERSECT membership { $$ = add_binop( node_kind::t_intersect , { $1 , $3 } ); }
+           | set_opers DIFF membership { $$ = add_binop( node_kind::t_diff , { $1 , $3 } ); }
+           | set_opers ISIN membership { $$ = add_binop( node_kind::t_isin , { $1 , $3 } ); }
+           | set_opers ISSUB membership { $$ = add_binop( node_kind::t_issub , { $1 , $3 } ); }
+           | COMP set_opers { $$ = add_unop( node_kind::t_compliment , $2 ); }
 
-membership  : arithmetic
-            | membership ISGT zow_or_equals arithmetic
-            | membership ISLT zow_or_equals arithmetic
+membership  : arithmetic { $$ = $1; }
+            | membership ISGT zow_or_equals arithmetic {
+                if ( $3 )   { $$ = add_binop( node_kind::t_gt , { $1 , $3 } ); }
+                else        { $$ = add_binop( node_kind::t_gtoe , { $1 , $3 } ); }
+            }
+            | membership ISLT zow_or_equals arithmetic {
+                if ( $3 )   { $$ = add_binop( node_kind::t_lt , { $1 , $3 } ); }
+                else        { $$ = add_binop( node_kind::t_ltoe , { $1 , $3 } ); }
+            }
             // | membership zow_is BTWN range
 
 zow_is : %empty  | IS
-zow_or_equals : %empty
-              | OR EQ
+zow_or_equals : %empty { $$ = false; }
+              | OR EQ  { $$ = true; }
 
 //TODO: range within
 range : arithmetic DOTDOT arithmetic
@@ -391,11 +409,13 @@ range : arithmetic DOTDOT arithmetic
       | L_BRCKT arithmetic DOTDOT arithmetic R_PAREN
       | L_BRCKT arithmetic DOTDOT arithmetic R_BRCKT
 
-arithmetic  : term
-            | arithmetic PLUS term
-            | arithmetic DASH term
-            | arithmetic STAR term
-            | arithmetic SLASH term
+arithmetic  : term { $$ = $1; }
+            | arithmetic PLUS term { $$ = add_binop( node_kind::t_add , { $1 , $3 } ); }
+            | arithmetic DASH term { $$ = add_binop( node_kind::t_minus , { $1 , $3 } ); }
+            | arithmetic STAR term { $$ = add_binop( node_kind::t_multiply , { $1 , $3 } ); }
+            | arithmetic SLASH term { $$ = add_binop( node_kind::t_divide , { $1 , $3 } ); }
+            | DASH term { $$ = add_unop( node_kind::t_negative , $2 ); }
+
             // TODO: assert $3 cannot be 0 for div
 // lhs & rhs name_sel
 
@@ -404,8 +424,13 @@ name_sel  : WORD { $$ = std::string( $1 ); }
 
 wom_sel : wom_sel ARROW WORD | ARROW WORD
 
-term    : atom
-        | L_PAREN expr R_PAREN
+term    : L_PAREN expr R_PAREN { $$ = $2; }
+        | atom {
+            spec::token t = spec::token( node_kind::atom );
+            t.val = std::move( $1 );
+
+            $$ = add_to_elements( std::move(t) );
+        }
 
 /*TODO: struct map*/
 /*
@@ -446,6 +471,18 @@ int add_to_elements( spec::token && t )
     t.id = elements.size();
     elements.emplace_back( t );
     return t.id;
+}
+int add_binop( node_kind op, const vec_of_ints & params )
+{
+    spec::token t = spec::token( op );
+    t.children = std::move( params );
+    return add_to_elements( std::move(t) );
+}
+int add_unop( node_kind op, int node )
+{
+    spec::token t = spec::token( op );
+    t.children.push_back( node );
+    return add_to_elements( std::move(t) );
 }
 //  second vector is consumed
 void merge_vectors( vec_of_ints & a, vec_of_ints & b )
