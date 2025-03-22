@@ -33,7 +33,9 @@ namespace spec
         t_gt, t_gtoe, t_lt, t_ltoe,
         t_add , t_minus , t_multiply, t_divide , t_negative,
         atom,
-        if_stmt, else_if_stmt, else_stmt
+        if_stmt, else_if_stmt, else_stmt,
+        assignment,
+        never_assert, always_assert
     };
 
     struct spec_parts
@@ -109,6 +111,9 @@ const std::unordered_map< spec::node_kind , std::string_view > node_to_name = {
     { spec::node_kind::if_stmt , "if_stmt" },
     { spec::node_kind::else_if_stmt , "else_if_stmt" },
     { spec::node_kind::else_stmt , "else_stmt" },
+    { spec::node_kind::assignment , "assignment" },
+    { spec::node_kind::never_assert , "never_assert" },
+    { spec::node_kind::always_assert , "always_assert" },
 };
 
 extern std::vector<spec::token> elements;

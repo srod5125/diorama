@@ -161,6 +161,7 @@ R_BRACE
 %type < int > set_opers membership arithmetic term
 %type < int > stmt if_stmt assignment else_if zow_else else
 %type < bool > zow_or_equals
+%type < int > never_assertion always_assertion
 
 
 %token < std::string_view > WORD
@@ -394,14 +395,31 @@ selection_stmt : FOR WORD IN expr zow_filter
 zow_filter : %empty | filter
 filter : SUCH THAT expr
 
-assignment : name_sel TIC ASSIGN expr {}
+assignment : name_sel TIC ASSIGN expr {
+    spec::token t = spec::token( node_kind::assignment );
+    t.val  = std::move( $1 );
+    t.next = $4;
+
+    $$ = add_to_elements( std::move(t) );
+}
 
     /* assertions & expressions */
 
-assertion : never_assertion | always_assertion
+assertion   : never_assertion { $$ = $1; }
+            | always_assertion { $$ = $1; }
 
-never_assertion  : MUST NEVER wom_dash_exprs END NEVER
-always_assertion : MUST ALWAYS wom_dash_exprs END ALWAYS
+never_assertion  : MUST NEVER wom_dash_exprs END NEVER {
+    spec::token t = spec::token( node_kind::never_assert );
+    t.children = std::move( $3 );
+
+    $$ = add_to_elements( std::move(t) );
+}
+always_assertion : MUST ALWAYS wom_dash_exprs END ALWAYS {
+    spec::token t = spec::token( node_kind::always_assert );
+    t.children = std::move( $3 );
+
+    $$ = add_to_elements( std::move(t) );
+}
 
 wom_dash_exprs : dash_expr { $$.push_back( $1 ); }
                | wom_dash_exprs dash_expr { $$.push_back( $2 ); }
