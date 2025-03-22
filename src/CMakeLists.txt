@@ -34,7 +34,8 @@ target_include_directories(${PROJ} PUBLIC
 
 # target flags
 target_compile_features(${PROJ} PRIVATE cxx_std_20)
-target_compile_options(${PROJ} PRIVATE -Wall -Wextra)
+# todo: disable -Wall -Wextra -ggdb on release build
+target_compile_options(${PROJ} PRIVATE -Wall -Wextra -ggdb)
 
 # link with cvc5
 find_package(cvc5)

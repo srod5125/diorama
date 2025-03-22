@@ -33,10 +33,7 @@ int main(int argc, char **argv)
     calcxx_driver drv;
     drv.parse( argv[1] );
 
-
-    for ( const auto & e : elements  ) {
-        LOG( e.id , node_to_name.at( e.kind ) );
-    }
+    print_elements();
 
 
     return status::ok;

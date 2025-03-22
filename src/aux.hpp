@@ -45,18 +45,22 @@ namespace spec
         std::vector< int > assertions;
     };
 
+    using string_pair = std::pair< std::string, std::string >;
+    using quant_int   =  std::pair< quant, int >;
+
     using atom_var = std::variant<
         spec_parts,
-        std::pair< std::string, std::string >,
+        string_pair,
         std::vector< std::string >,
         int,
         bool,
         std::string,
-        std::pair< quant, int >
+        quant_int
     > ;
 
     struct token
     {
+        //the id is its position in elements
         int id;
         node_kind kind = unkown;
         std::vector< int > children;
@@ -117,6 +121,8 @@ const std::unordered_map< spec::node_kind , std::string_view > node_to_name = {
 };
 
 extern std::vector<spec::token> elements;
+
+void print_elements( void );
 
 /*
 

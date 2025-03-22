@@ -29,7 +29,6 @@
     //any global aliases are better placed here
 
     using vec_of_ints = std::vector< int >;
-    using quant_int = std::pair< spec::quant, int >;
 
     using namespace spec;
 }
@@ -60,7 +59,6 @@
     int add_binop( node_kind op, const vec_of_ints & params );
     int add_unop( node_kind op, int node );
     void merge_vectors( vec_of_ints & a, vec_of_ints & b );
-    int get_element_id( int node_id );
     void set_nexts( vec_of_ints & series_of_nodes );
 
 }
@@ -154,7 +152,7 @@ R_BRACE
 %type < std::string > name_sel
 %type < vec_of_ints > wom_then_blocks
 %type < int > when_block then_block
-%type < quant_int > quantifier
+%type < spec::quant_int > quantifier
 %type < vec_of_ints > zom_dash_exprs wom_dash_exprs
 %type < vec_of_ints > wom_stmts zom_else_if
 %type < int > dash_expr expr equality
@@ -206,14 +204,15 @@ zom_assertions : %empty { vec_of_ints t; $$ = t; }
 zom_schemes : zom_schemes scheme { $$.push_back( $2 ); }
             | scheme { vec_of_ints t; t.push_back( $1 ); $$ = t; }
 
-scheme : record_def
-       | enum_def
+scheme : record_def { $$ = $1; }
+       | enum_def { $$ = $1; }
 
 are_or_is : ARE | IS
 
 record_def : RECORD WORD are_or_is wom_decleration END RECORD {
     spec::token t = spec::token( node_kind::record_def , std::string( $2 ) );
     t.children = std::move( $4 );
+
     $$ = add_to_elements( std::move(t) );
 }
 
@@ -291,13 +290,12 @@ wom_word_to_structure_mapping : wom_word_to_structure_mapping COMMA word_to_stru
 
 word_to_structure :  WORD ASSIGN structure {
     spec::token t = spec::token( node_kind::word_to_struct , std::string( $1 ) );
-    t.kind = word_to_struct;
-    t.val = $3;
+    t.val = std::move( $3 );
 
     $$ = add_to_elements( std::move(t) );
 }
 
-structure : atom { $$=$1; }
+structure : atom { $$ = std::move( $1 ); }
 
 zom_rules   : %empty { vec_of_ints t; $$ = t; }
             | zom_rules rule { $$.push_back( $2 ); }
@@ -331,7 +329,7 @@ wom_then_blocks : then_block { $$.push_back( $1 ); }
 
 then_block : THEN COLON wom_stmts {
     spec::token t = spec::token( node_kind::then_block );
-    t.next = get_element_id( $3[0] );
+    t.next = elements[ $3[0] ].id;
     set_nexts( $3 );
 
     $$ = add_to_elements( std::move(t) );
@@ -358,7 +356,7 @@ if_stmt : IF expr THEN wom_stmts zom_else_if zow_else END IF {
 
     spec::token t = spec::token( node_kind::if_stmt );
     t.val = $2;
-    t.children.push_back( get_element_id( $4[0] ) );
+    t.children.push_back( elements[ $4[0] ].id );
     set_nexts( $4 );
     merge_vectors( t.children, $5 );
     if ( $6 != -1 ) { t.children.push_back( $6 ); }
@@ -372,7 +370,7 @@ else_if : ELSE IF expr THEN COLON wom_stmts {
 
     spec::token t = spec::token( node_kind::else_if_stmt );
     t.val = $3;
-    t.next = get_element_id( $6[0] );
+    t.next = elements[ $6[0] ].id;
     set_nexts( $6 );
 
     $$ = add_to_elements( std::move(t) );
@@ -383,7 +381,7 @@ zow_else : %empty { $$ = -1; }
 else : ELSE COLON wom_stmts {
 
     spec::token t = spec::token( node_kind::else_stmt );
-    t.next = get_element_id( $3[0] );
+    t.next = elements[ $3[0] ].id;
     set_nexts( $3 );
 
     $$ = add_to_elements( std::move(t) );
@@ -542,30 +540,15 @@ int add_unop( node_kind op, int node )
 void set_nexts( vec_of_ints & series_of_nodes )
 {
     const int curr_node = series_of_nodes[0];
-    int curr_el = get_element_id( curr_node );
+    int curr_el = elements[ curr_node ].id;
     for( int next_node = 1; next_node < series_of_nodes.size(); next_node += 1 )
     {
-        int next_el = get_element_id( series_of_nodes[ next_node ] );
+        int next_el = elements[ series_of_nodes[ next_node ] ].id;
 
         elements[ curr_el ].next = elements[ next_el ].id;
 
         curr_el = next_el;
     }
-}
-int get_element_id( int node_id )
-{
-    int el_pos = -1;
-    int i = 0;
-    for ( const auto & e : elements )
-    {
-        if ( e.id == node_id )
-        {
-            el_pos = i;
-            break;
-        }
-        i += 1;
-    }
-    return el_pos;
 }
 //  second vector is consumed
 void merge_vectors( vec_of_ints & a, vec_of_ints & b )
