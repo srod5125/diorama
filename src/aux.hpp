@@ -26,13 +26,14 @@ namespace spec
         word_to_struct,
         int_val,
         rule,
-        when_block,
+        when_block, then_block,
         t_and, t_or, t_xor, t_not,
         t_equal, t_not_equal,
         t_union, t_intersect, t_diff, t_isin, t_issub, t_compliment,
         t_gt, t_gtoe, t_lt, t_ltoe,
         t_add , t_minus , t_multiply, t_divide , t_negative,
-        atom
+        atom,
+        if_stmt, else_if_stmt, else_stmt
     };
 
     struct spec_parts
@@ -60,6 +61,7 @@ namespace spec
         std::string name;
 
         atom_var val;
+        int next;
 
         token( );
         token( node_kind kind );
@@ -80,6 +82,8 @@ const std::unordered_map< spec::node_kind , std::string_view > node_to_name = {
     { spec::node_kind::word_to_struct , "word_to_struct" },
     { spec::node_kind::int_val , "int_val" },
     { spec::node_kind::rule , "rule" },
+    { spec::node_kind::when_block , "when_block" },
+    { spec::node_kind::then_block , "then_block" },
     { spec::node_kind::t_and , "and" },
     { spec::node_kind::t_or , "or" },
     { spec::node_kind::t_xor , "xor" },
@@ -102,6 +106,9 @@ const std::unordered_map< spec::node_kind , std::string_view > node_to_name = {
     { spec::node_kind::t_divide , "t_divide" },
     { spec::node_kind::t_negative , "t_negative" },
     { spec::node_kind::atom , "atom" },
+    { spec::node_kind::if_stmt , "if_stmt" },
+    { spec::node_kind::else_if_stmt , "else_if_stmt" },
+    { spec::node_kind::else_stmt , "else_stmt" },
 };
 
 extern std::vector<spec::token> elements;

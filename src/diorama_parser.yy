@@ -60,6 +60,8 @@
     int add_binop( node_kind op, const vec_of_ints & params );
     int add_unop( node_kind op, int node );
     void merge_vectors( vec_of_ints & a, vec_of_ints & b );
+    int get_element_id( int node_id );
+    void set_nexts( vec_of_ints & series_of_nodes );
 
 }
 
@@ -154,10 +156,11 @@ R_BRACE
 %type < int > when_block then_block
 %type < quant_int > quantifier
 %type < vec_of_ints > zom_dash_exprs wom_dash_exprs
+%type < vec_of_ints > wom_stmts zom_else_if
 %type < int > dash_expr expr equality
 %type < int > set_opers membership arithmetic term
+%type < int > stmt if_stmt assignment else_if zow_else else
 %type < bool > zow_or_equals
-
 
 
 %token < std::string_view > WORD
@@ -325,10 +328,16 @@ wom_then_blocks : then_block { $$.push_back( $1 ); }
                 | wom_then_blocks OR then_block { $$.push_back( $3 ); }
 
 
-then_block : THEN COLON wom_stmts
+then_block : THEN COLON wom_stmts {
+    spec::token t = spec::token( node_kind::then_block );
+    t.next = get_element_id( $3[0] );
+    set_nexts( $3 );
 
-wom_stmts : stmt
-          | wom_stmts stmt
+    $$ = add_to_elements( std::move(t) );
+}
+
+wom_stmts : stmt { $$.push_back( $1 ); }
+          | wom_stmts stmt { $$.push_back( $2 ); }
 
 quantifier
   : ANY             { $$ = std::make_pair( quant::any, 0 ); }
@@ -338,17 +347,46 @@ quantifier
   | AT LEAST INT    { $$ = std::make_pair( quant::at_least, $3 ); }
 //TODO: add or equal to to at most or at least
 
-stmt : if_stmt
-     | assignment DOT
+stmt : if_stmt { $$ = $1; }
+     | assignment DOT { $$ = $1; }
      // | skip
      // | aborts
      // | selection_stmt DOT
 
-if_stmt : IF expr THEN wom_stmts zom_else_if zow_else END IF
-zom_else_if : %empty | zom_else_if else_if
-else_if : ELSE IF expr THEN COLON wom_stmts
-zow_else : %empty | else
-else : ELSE COLON wom_stmts
+if_stmt : IF expr THEN wom_stmts zom_else_if zow_else END IF {
+
+    spec::token t = spec::token( node_kind::if_stmt );
+    t.val = $2;
+    t.children.push_back( get_element_id( $4[0] ) );
+    set_nexts( $4 );
+    merge_vectors( t.children, $5 );
+    if ( $6 != -1 ) { t.children.push_back( $6 ); }
+
+    $$ = add_to_elements( std::move(t) );
+}
+zom_else_if : %empty { vec_of_ints t; $$ = t; }
+            | zom_else_if else_if { $$.push_back( $2 ); }
+
+else_if : ELSE IF expr THEN COLON wom_stmts {
+
+    spec::token t = spec::token( node_kind::else_if_stmt );
+    t.val = $3;
+    t.next = get_element_id( $6[0] );
+    set_nexts( $6 );
+
+    $$ = add_to_elements( std::move(t) );
+}
+zow_else : %empty { $$ = -1; }
+         | else   { $$ = $1; }
+
+else : ELSE COLON wom_stmts {
+
+    spec::token t = spec::token( node_kind::else_stmt );
+    t.next = get_element_id( $3[0] );
+    set_nexts( $3 );
+
+    $$ = add_to_elements( std::move(t) );
+}
 
 selection_stmt : FOR WORD IN expr zow_filter
                | FOR SOME WORD IN expr zow_filter
@@ -363,7 +401,6 @@ assignment : name_sel TIC ASSIGN expr {}
 assertion : never_assertion | always_assertion
 
 never_assertion  : MUST NEVER wom_dash_exprs END NEVER
-
 always_assertion : MUST ALWAYS wom_dash_exprs END ALWAYS
 
 wom_dash_exprs : dash_expr { $$.push_back( $1 ); }
@@ -483,6 +520,34 @@ int add_unop( node_kind op, int node )
     spec::token t = spec::token( op );
     t.children.push_back( node );
     return add_to_elements( std::move(t) );
+}
+void set_nexts( vec_of_ints & series_of_nodes )
+{
+    const int curr_node = series_of_nodes[0];
+    int curr_el = get_element_id( curr_node );
+    for( int next_node = 1; next_node < series_of_nodes.size(); next_node += 1 )
+    {
+        int next_el = get_element_id( series_of_nodes[ next_node ] );
+
+        elements[ curr_el ].next = elements[ next_el ].id;
+
+        curr_el = next_el;
+    }
+}
+int get_element_id( int node_id )
+{
+    int el_pos = -1;
+    int i = 0;
+    for ( const auto & e : elements )
+    {
+        if ( e.id == node_id )
+        {
+            el_pos = i;
+            break;
+        }
+        i += 1;
+    }
+    return el_pos;
 }
 //  second vector is consumed
 void merge_vectors( vec_of_ints & a, vec_of_ints & b )
