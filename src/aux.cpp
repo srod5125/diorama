@@ -3,11 +3,8 @@
 #include "log.hpp"
 #include <cassert>
 #include <string>
-#include <variant>
 #include <vector>
 
-// init for global store
-std::vector<spec::token> elements {};
 
 
 spec::token::token( node_kind kind ) : next(0)
@@ -27,23 +24,12 @@ spec::token::token( node_kind kind , std::string & name ) : next(0)
     this->name = std::move( name );
 }
 
-void print_children( const std::vector<int> & children )
-{
-    if ( ! children.empty() ) {
-        LOG_NNL("->");
-        for ( const auto e : children )
-        {
-            LOG_NNL( elements[ e ].id );
-        }
-    }
-    LOG();
-}
 
-void print_elements( void )
+void spec::file::print_elements( void )
 {
     using namespace spec;
 
-    for ( const auto & e : elements  ) {
+    for ( const auto & e : this->elems ) {
 
         LOG_NNL( e.id , node_to_name.at( e.kind ) );
 
@@ -164,13 +150,13 @@ void print_elements( void )
                 else if ( std::holds_alternative<std::string>(e.val) ) { LOG_NNL(std::get<std::string>(e.val)); }
             }; break;
             case if_stmt: {
-                node_kind k =  elements[ std::get<int>( e.val ) ].kind;
-                int id =  elements[ std::get<int>( e.val ) ].id;
+                node_kind k =  this->elems[ std::get<int>( e.val ) ].kind;
+                int id =  this->elems[ std::get<int>( e.val ) ].id;
                 LOG_NNL( "expr: ", node_to_name.at( k ), "at", id );
             }; break;
             case else_if_stmt: {
-                node_kind k =  elements[ std::get<int>( e.val ) ].kind;
-                int id =  elements[ std::get<int>( e.val ) ].id;
+                node_kind k =  this->elems[ std::get<int>( e.val ) ].kind;
+                int id =  this->elems[ std::get<int>( e.val ) ].id;
                 LOG_NNL( "expr: ", node_to_name.at( k ), "at", id );
             }; break;
             case else_stmt: {
@@ -191,6 +177,15 @@ void print_elements( void )
             } break;
         }
         if ( e.next != 0 ) LOG_NNL( "next:", e.next );
-        print_children( e.children );
+
+        //print children
+        if ( ! e.children.empty() ) {
+            LOG_NNL("->");
+            for ( const auto c : e.children )
+            {
+                LOG_NNL( this->elems[ c ].id );
+            }
+        }
+        LOG();
     }
 }

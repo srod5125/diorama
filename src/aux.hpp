@@ -8,6 +8,7 @@
 #include <variant>
 #include <utility>
 
+#include <cvc5/cvc5.h>
 
 namespace spec
 {
@@ -69,12 +70,23 @@ namespace spec
         atom_var val;
         int next;
 
+        cvc5::Term term;
+
         token( );
         token( node_kind kind );
         token( node_kind kind , std::string & name );
         token( node_kind kind , std::string && name );
 
     };
+
+    struct file
+    {
+        std::vector<token> elems;
+
+
+        void print_elements( void );
+    };
+
 }
 
 const std::unordered_map< spec::node_kind , std::string_view > node_to_name = {
@@ -119,10 +131,6 @@ const std::unordered_map< spec::node_kind , std::string_view > node_to_name = {
     { spec::node_kind::never_assert , "never_assert" },
     { spec::node_kind::always_assert , "always_assert" },
 };
-
-extern std::vector<spec::token> elements;
-
-void print_elements( void );
 
 /*
 

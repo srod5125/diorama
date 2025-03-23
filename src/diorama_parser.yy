@@ -39,7 +39,7 @@
 
 %initial-action
 {
-  @$.begin.filename = @$.end.filename = &drv.file;
+  @$.begin.filename = @$.end.filename = &drv.input_file;
 }
 
 %define parse.trace
@@ -54,13 +54,8 @@
     // zow = zero or won
     // wom = one  or more
 
-    extern std::vector<spec::token> elements;
-    int add_to_elements( spec::token && t );
-    int add_binop( node_kind op, const vec_of_ints & params );
-    int add_unop( node_kind op, int node );
     void merge_vectors( vec_of_ints & a, vec_of_ints & b );
     void merge_vectors( std::vector<std::string> & a, std::vector<std::string> & b );
-    void set_nexts( vec_of_ints & series_of_nodes );
 
 }
 
@@ -190,7 +185,7 @@ module :  MODULE WORD IS data body zom_assertions END WORD
     sp.assertions   = std::move( $6 );
 
     t.val = std::move( sp );
-    add_to_elements( std::move(t) );
+    drv.add_to_elements( std::move(t) );
 }
 
 // TODO: eventually test out of order decleration,
@@ -213,21 +208,21 @@ record_def : RECORD WORD are_or_is wom_decleration END RECORD {
     spec::token t = spec::token( node_kind::record_def , std::string( $2 ) );
     t.children = std::move( $4 );
 
-    $$ = add_to_elements( std::move(t) );
+    $$ = drv.add_to_elements( std::move(t) );
 }
 
 members_def : MEMBERS ARE wom_decleration END MEMBERS {
     spec::token t = spec::token( node_kind::members_def );
     t.children = std::move( $3 );
 
-    $$ = add_to_elements( std::move(t) );
+    $$ = drv.add_to_elements( std::move(t) );
 }
 
 enum_def : WORD are_or_is L_ANGLE_BRCKT wom_enums R_ANGLE_BRCKT {
     spec::token t = spec::token( node_kind::enum_def , std::string( $1 ) );
     t.val = std::move( $4 );
 
-    $$ = add_to_elements( std::move(t) );
+    $$ = drv.add_to_elements( std::move(t) );
 }
 wom_enums   : wom_enums COMMA WORD { $1.emplace_back( std::string($3) ); merge_vectors( $$ , $1 ); }
             | WORD { $$.emplace_back( std::string($1) ); }
@@ -248,7 +243,7 @@ named_decl : WORD in_or_is WORD {
     spec::token t = spec::token( node_kind::named_decl );
     t.val  = var_val_pair;
 
-    $$ = add_to_elements( std::move(t) );
+    $$ = drv.add_to_elements( std::move(t) );
 }
 set_decl : WORD ISSETOF WORD
 //TODO: second word can be expression
@@ -275,7 +270,7 @@ members_init : START FOR MEMBERS IS basic_init END START {
     t.name = "members";
     t.children = std::move( $5 );
 
-    $$ = add_to_elements( std::move(t) );
+    $$ = drv.add_to_elements( std::move(t) );
 }
 
 array_map_init : wom_structure_mapping
@@ -291,7 +286,7 @@ word_to_structure :  WORD ASSIGN structure {
     spec::token t = spec::token( node_kind::word_to_struct , std::string( $1 ) );
     t.val = std::move( $3 );
 
-    $$ = add_to_elements( std::move(t) );
+    $$ = drv.add_to_elements( std::move(t) );
 }
 
 structure : atom { $$ = std::move( $1 ); }
@@ -304,7 +299,7 @@ rule : RULE WORD are_or_is when_block wom_then_blocks END RULE {
     t.children.push_back( $4 );
     merge_vectors( t.children , $5 );
 
-    $$ = add_to_elements( std::move(t) );
+    $$ = drv.add_to_elements( std::move(t) );
 }
 
 
@@ -313,7 +308,7 @@ when_block : WHEN quantifier COLON zom_dash_exprs {
     t.val = $2;
     t.children = std::move( $4 );
 
-    $$ = add_to_elements( std::move(t) );
+    $$ = drv.add_to_elements( std::move(t) );
 }
 
 zom_dash_exprs  : %empty
@@ -327,10 +322,10 @@ wom_then_blocks : then_block { $$.push_back( $1 ); }
 
 then_block : THEN COLON wom_stmts {
     spec::token t = spec::token( node_kind::then_block );
-    t.next = elements[ $3[0] ].id;
-    set_nexts( $3 );
+    t.next = drv.s_file.elems[ $3[0] ].id;
+    drv.set_nexts( $3 );
 
-    $$ = add_to_elements( std::move(t) );
+    $$ = drv.add_to_elements( std::move(t) );
 }
 
 wom_stmts : stmt { $$.push_back( $1 ); }
@@ -354,12 +349,12 @@ if_stmt : IF expr THEN wom_stmts zom_else_if zow_else END IF {
 
     spec::token t = spec::token( node_kind::if_stmt );
     t.val = $2;
-    t.children.push_back( elements[ $4[0] ].id );
-    set_nexts( $4 );
+    t.children.push_back( drv.s_file.elems[ $4[0] ].id );
+    drv.set_nexts( $4 );
     merge_vectors( t.children, $5 );
     if ( $6 != -1 ) { t.children.push_back( $6 ); }
 
-    $$ = add_to_elements( std::move(t) );
+    $$ = drv.add_to_elements( std::move(t) );
 }
 zom_else_if : %empty
             | zom_else_if else_if { $1.push_back( $2 ); merge_vectors( $$ , $1 ); }
@@ -368,10 +363,10 @@ else_if : ELSE IF expr THEN COLON wom_stmts {
 
     spec::token t = spec::token( node_kind::else_if_stmt );
     t.val = $3;
-    t.next = elements[ $6[0] ].id;
-    set_nexts( $6 );
+    t.next = drv.s_file.elems[ $6[0] ].id;
+    drv.set_nexts( $6 );
 
-    $$ = add_to_elements( std::move(t) );
+    $$ = drv.add_to_elements( std::move(t) );
 }
 zow_else : %empty { $$ = -1; }
          | else   { $$ = $1; }
@@ -379,10 +374,10 @@ zow_else : %empty { $$ = -1; }
 else : ELSE COLON wom_stmts {
 
     spec::token t = spec::token( node_kind::else_stmt );
-    t.next = elements[ $3[0] ].id;
-    set_nexts( $3 );
+    t.next = drv.s_file.elems[ $3[0] ].id;
+    drv.set_nexts( $3 );
 
-    $$ = add_to_elements( std::move(t) );
+    $$ = drv.add_to_elements( std::move(t) );
 }
 
 selection_stmt : FOR WORD IN expr zow_filter
@@ -396,7 +391,7 @@ assignment : name_sel TIC ASSIGN expr {
     t.val  = std::move( $1 );
     t.next = $4;
 
-    $$ = add_to_elements( std::move(t) );
+    $$ = drv.add_to_elements( std::move(t) );
 }
 
     /* assertions & expressions */
@@ -408,44 +403,44 @@ never_assertion  : MUST NEVER wom_dash_exprs END NEVER {
     spec::token t = spec::token( node_kind::never_assert );
     t.children = std::move( $3 );
 
-    $$ = add_to_elements( std::move(t) );
+    $$ = drv.add_to_elements( std::move(t) );
 }
 always_assertion : MUST ALWAYS wom_dash_exprs END ALWAYS {
     spec::token t = spec::token( node_kind::always_assert );
     t.children = std::move( $3 );
 
-    $$ = add_to_elements( std::move(t) );
+    $$ = drv.add_to_elements( std::move(t) );
 }
 
 wom_dash_exprs : dash_expr { $$.push_back( $1 ); }
                | wom_dash_exprs dash_expr { $1.push_back( $2 ); merge_vectors( $$ , $1 ); }
 
 expr  : equality { $$ = $1; }
-      | expr AND equality { $$ = add_binop( node_kind::t_and , { $1 , $3 } ); }
-      | expr OR equality { $$ = add_binop( node_kind::t_or , { $1 , $3 }); }
-      | expr ORRATHER equality { $$ = add_binop( node_kind::t_xor , { $1 , $3 }); }
-      | NOT expr { $$ = add_unop( node_kind::t_not , $2 ); }
+      | expr AND equality { $$ = drv.add_binop( node_kind::t_and , { $1 , $3 } ); }
+      | expr OR equality { $$ = drv.add_binop( node_kind::t_or , { $1 , $3 }); }
+      | expr ORRATHER equality { $$ = drv.add_binop( node_kind::t_xor , { $1 , $3 }); }
+      | NOT expr { $$ = drv.add_unop( node_kind::t_not , $2 ); }
 
 equality  : set_opers { $$ = $1; }
-          | equality EQ set_opers { $$ = add_binop( node_kind::t_equal , { $1 , $3 } ); }
-          | equality NOTEQ set_opers { $$ = add_binop( node_kind::t_not_equal , { $1 , $3 } ); }
+          | equality EQ set_opers { $$ = drv.add_binop( node_kind::t_equal , { $1 , $3 } ); }
+          | equality NOTEQ set_opers { $$ = drv.add_binop( node_kind::t_not_equal , { $1 , $3 } ); }
 
 set_opers  : membership { $$ = $1; }
-           | set_opers UNION membership { $$ = add_binop( node_kind::t_union , { $1 , $3 } ); }
-           | set_opers INTERSECT membership { $$ = add_binop( node_kind::t_intersect , { $1 , $3 } ); }
-           | set_opers DIFF membership { $$ = add_binop( node_kind::t_diff , { $1 , $3 } ); }
-           | set_opers ISIN membership { $$ = add_binop( node_kind::t_isin , { $1 , $3 } ); }
-           | set_opers ISSUB membership { $$ = add_binop( node_kind::t_issub , { $1 , $3 } ); }
-           | COMP set_opers { $$ = add_unop( node_kind::t_compliment , $2 ); }
+           | set_opers UNION membership { $$ = drv.add_binop( node_kind::t_union , { $1 , $3 } ); }
+           | set_opers INTERSECT membership { $$ = drv.add_binop( node_kind::t_intersect , { $1 , $3 } ); }
+           | set_opers DIFF membership { $$ = drv.add_binop( node_kind::t_diff , { $1 , $3 } ); }
+           | set_opers ISIN membership { $$ = drv.add_binop( node_kind::t_isin , { $1 , $3 } ); }
+           | set_opers ISSUB membership { $$ = drv.add_binop( node_kind::t_issub , { $1 , $3 } ); }
+           | COMP set_opers { $$ = drv.add_unop( node_kind::t_compliment , $2 ); }
 
 membership  : arithmetic { $$ = $1; }
             | membership ISGT zow_or_equals arithmetic {
-                if ( $3 )   { $$ = add_binop( node_kind::t_gt , { $1 , $4 } ); }
-                else        { $$ = add_binop( node_kind::t_gtoe , { $1 , $4 } ); }
+                if ( $3 )   { $$ = drv.add_binop( node_kind::t_gt , { $1 , $4 } ); }
+                else        { $$ = drv.add_binop( node_kind::t_gtoe , { $1 , $4 } ); }
             }
             | membership ISLT zow_or_equals arithmetic {
-                if ( $3 )   { $$ = add_binop( node_kind::t_lt , { $1 , $4 } ); }
-                else        { $$ = add_binop( node_kind::t_ltoe , { $1 , $4 } ); }
+                if ( $3 )   { $$ = drv.add_binop( node_kind::t_lt , { $1 , $4 } ); }
+                else        { $$ = drv.add_binop( node_kind::t_ltoe , { $1 , $4 } ); }
             }
             // | membership zow_is BTWN range
 
@@ -461,11 +456,11 @@ range : arithmetic DOTDOT arithmetic
       | L_BRCKT arithmetic DOTDOT arithmetic R_BRCKT
 
 arithmetic  : term { $$ = $1; }
-            | arithmetic PLUS term { $$ = add_binop( node_kind::t_add , { $1 , $3 } ); }
-            | arithmetic DASH term { $$ = add_binop( node_kind::t_minus , { $1 , $3 } ); }
-            | arithmetic STAR term { $$ = add_binop( node_kind::t_multiply , { $1 , $3 } ); }
-            | arithmetic SLASH term { $$ = add_binop( node_kind::t_divide , { $1 , $3 } ); }
-            | DASH term { $$ = add_unop( node_kind::t_negative , $2 ); }
+            | arithmetic PLUS term { $$ = drv.add_binop( node_kind::t_add , { $1 , $3 } ); }
+            | arithmetic DASH term { $$ = drv.add_binop( node_kind::t_minus , { $1 , $3 } ); }
+            | arithmetic STAR term { $$ = drv.add_binop( node_kind::t_multiply , { $1 , $3 } ); }
+            | arithmetic SLASH term { $$ = drv.add_binop( node_kind::t_divide , { $1 , $3 } ); }
+            | DASH term { $$ = drv.add_unop( node_kind::t_negative , $2 ); }
 
             // TODO: assert $3 cannot be 0 for div
 // lhs & rhs name_sel
@@ -480,7 +475,7 @@ term    : L_PAREN expr R_PAREN { $$ = $2; }
             spec::token t = spec::token( node_kind::atom );
             t.val = std::move( $1 );
 
-            $$ = add_to_elements( std::move(t) );
+            $$ = drv.add_to_elements( std::move(t) );
         }
 
 /*TODO: struct map*/
@@ -515,38 +510,6 @@ wom_atom : wom_atom COMMA atom | atom
 void yy::calcxx_parser::error(const location & loc, const std::string & err_msg)
 {
     drv.error( loc, err_msg );
-}
-
-int add_to_elements( spec::token && t )
-{
-    t.id = elements.size();
-    elements.emplace_back( t );
-    return t.id;
-}
-int add_binop( node_kind op, const vec_of_ints & params )
-{
-    spec::token t = spec::token( op );
-    t.children = std::move( params );
-    return add_to_elements( std::move(t) );
-}
-int add_unop( node_kind op, int node )
-{
-    spec::token t = spec::token( op );
-    t.children.push_back( node );
-    return add_to_elements( std::move(t) );
-}
-void set_nexts( vec_of_ints & series_of_nodes )
-{
-    const int curr_node = series_of_nodes[0];
-    int curr_el = elements[ curr_node ].id;
-    for( int next_node = 1; next_node < series_of_nodes.size(); next_node += 1 )
-    {
-        int next_el = elements[ series_of_nodes[ next_node ] ].id;
-
-        elements[ curr_el ].next = elements[ next_el ].id;
-
-        curr_el = next_el;
-    }
 }
 //  second vector is consumed
 void merge_vectors( vec_of_ints & a, vec_of_ints & b )

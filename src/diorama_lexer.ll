@@ -154,19 +154,21 @@ blank   [ \t]
 %%
 
 
-void calcxx_driver::scan_begin() {
+void calcxx_driver::scan_begin()
+{
     yy_flex_debug = trace_scanning;
 
-    if(this->file.empty() || this->file == "-") {
+    if(this->input_file.empty() || this->input_file == "-") {
         yyin = stdin;
     }
-    else if( ! (yyin = fopen(this->file.c_str(), "r")) ) {
+    else if( ! (yyin = fopen(this->input_file.c_str(), "r")) ) {
         LOG_ERR( "cannot open file: " , strerror(errno) );
         exit(EXIT_FAILURE);
     }
 
 }
 
-void calcxx_driver::scan_end() {
+void calcxx_driver::scan_end()
+{
   fclose(yyin);
 }
