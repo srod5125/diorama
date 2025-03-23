@@ -59,6 +59,7 @@
     int add_binop( node_kind op, const vec_of_ints & params );
     int add_unop( node_kind op, int node );
     void merge_vectors( vec_of_ints & a, vec_of_ints & b );
+    void merge_vectors( std::vector<std::string> & a, std::vector<std::string> & b );
     void set_nexts( vec_of_ints & series_of_nodes );
 
 }
@@ -195,14 +196,13 @@ module :  MODULE WORD IS data body zom_assertions END WORD
 // TODO: eventually test out of order decleration,
 // TODO: mix data and body under univeral_block
 
-data           : zom_schemes members_def { $$.push_back( $2 ); }
-body           : inits zom_rules { merge_vectors( $1 , $2 ); }
-zom_assertions : %empty { vec_of_ints t; $$ = t; }
-               | zom_assertions assertion { $$.push_back( $2 ); }
+data           : zom_schemes members_def { $1.push_back( $2 ); merge_vectors( $$ , $1 ); }
+body           : inits zom_rules { merge_vectors( $1 , $2 ); merge_vectors( $$ , $1 );  }
+zom_assertions : %empty | zom_assertions assertion { $1.push_back( $2 ); merge_vectors( $$ , $1 ); }
 
     /* data & schemes */
-zom_schemes : zom_schemes scheme { $$.push_back( $2 ); }
-            | scheme { vec_of_ints t; t.push_back( $1 ); $$ = t; }
+zom_schemes : zom_schemes scheme { $1.push_back( $2 ); merge_vectors( $$ , $1 ); }
+            | scheme { $$.push_back( $1 ); }
 
 scheme : record_def { $$ = $1; }
        | enum_def { $$ = $1; }
@@ -229,11 +229,11 @@ enum_def : WORD are_or_is L_ANGLE_BRCKT wom_enums R_ANGLE_BRCKT {
 
     $$ = add_to_elements( std::move(t) );
 }
-wom_enums   : wom_enums COMMA WORD { $$.emplace_back( std::string($3) ); }
-            | WORD { std::vector< std::string > t; t.emplace_back( std::string($1) ); $$=t; }
+wom_enums   : wom_enums COMMA WORD { $1.emplace_back( std::string($3) ); merge_vectors( $$ , $1 ); }
+            | WORD { $$.emplace_back( std::string($1) ); }
 
-wom_decleration : wom_decleration declaration { $$.push_back( $2 ); }
-                | declaration { vec_of_ints t; t.push_back( $1 ); $$ = t; }
+wom_decleration : wom_decleration declaration { $1.push_back( $2 ); merge_vectors( $$ , $1 ); }
+                | declaration { $$.push_back( $1 ); }
 
 declaration : named_decl DOT { $$ = $1; }
             // | set_decl DOT
@@ -262,10 +262,9 @@ wom_types  : wom_types COMMA WORD | WORD
 
 in_or_is : IN | IS
 
-inits : zom_inits members_init
+inits : zom_inits members_init { $1.push_back( $2 ); merge_vectors( $$ , $1 );  }
 
-zom_inits   : %empty { vec_of_ints t; $$ = t; }
-            | zom_inits init { $$.push_back( $2 ); }
+zom_inits   : %empty | zom_inits init { $1.push_back( $2 ); merge_vectors( $$ , $1 );  }
 
 init : struct_init | array_init
 array_init   : START FOR WORD IS array_map_init END START
@@ -297,8 +296,7 @@ word_to_structure :  WORD ASSIGN structure {
 
 structure : atom { $$ = std::move( $1 ); }
 
-zom_rules   : %empty { vec_of_ints t; $$ = t; }
-            | zom_rules rule { $$.push_back( $2 ); }
+zom_rules   : %empty | zom_rules rule { $1.push_back( $2 ); merge_vectors( $$ , $1 ); }
 
 rule : RULE WORD are_or_is when_block wom_then_blocks END RULE {
     spec::token t = spec::token( node_kind::rule , std::string( $2 ) );
@@ -318,13 +316,13 @@ when_block : WHEN quantifier COLON zom_dash_exprs {
     $$ = add_to_elements( std::move(t) );
 }
 
-zom_dash_exprs  : %empty { vec_of_ints t; $$ = t; }
-                | zom_dash_exprs dash_expr { $$.push_back( $2 ); }
+zom_dash_exprs  : %empty
+                | zom_dash_exprs dash_expr { $1.push_back( $2 ); merge_vectors( $$ , $1 ); }
 
 dash_expr : DASH expr DOT { $$ = $2; }
 
 wom_then_blocks : then_block { $$.push_back( $1 ); }
-                | wom_then_blocks OR then_block { $$.push_back( $3 ); }
+                | wom_then_blocks OR then_block { $1.push_back( $3 ); merge_vectors( $$ , $1 );  }
 
 
 then_block : THEN COLON wom_stmts {
@@ -336,7 +334,7 @@ then_block : THEN COLON wom_stmts {
 }
 
 wom_stmts : stmt { $$.push_back( $1 ); }
-          | wom_stmts stmt { $$.push_back( $2 ); }
+          | wom_stmts stmt { $1.push_back( $2 ); merge_vectors( $$ , $1 ); }
 
 quantifier
   : ANY             { $$ = std::make_pair( quant::any, 0 ); }
@@ -363,8 +361,8 @@ if_stmt : IF expr THEN wom_stmts zom_else_if zow_else END IF {
 
     $$ = add_to_elements( std::move(t) );
 }
-zom_else_if : %empty { vec_of_ints t; $$ = t; }
-            | zom_else_if else_if { $$.push_back( $2 ); }
+zom_else_if : %empty
+            | zom_else_if else_if { $1.push_back( $2 ); merge_vectors( $$ , $1 ); }
 
 else_if : ELSE IF expr THEN COLON wom_stmts {
 
@@ -420,7 +418,7 @@ always_assertion : MUST ALWAYS wom_dash_exprs END ALWAYS {
 }
 
 wom_dash_exprs : dash_expr { $$.push_back( $1 ); }
-               | wom_dash_exprs dash_expr { $$.push_back( $2 ); }
+               | wom_dash_exprs dash_expr { $1.push_back( $2 ); merge_vectors( $$ , $1 ); }
 
 expr  : equality { $$ = $1; }
       | expr AND equality { $$ = add_binop( node_kind::t_and , { $1 , $3 } ); }
@@ -442,12 +440,12 @@ set_opers  : membership { $$ = $1; }
 
 membership  : arithmetic { $$ = $1; }
             | membership ISGT zow_or_equals arithmetic {
-                if ( $3 )   { $$ = add_binop( node_kind::t_gt , { $1 , $3 } ); }
-                else        { $$ = add_binop( node_kind::t_gtoe , { $1 , $3 } ); }
+                if ( $3 )   { $$ = add_binop( node_kind::t_gt , { $1 , $4 } ); }
+                else        { $$ = add_binop( node_kind::t_gtoe , { $1 , $4 } ); }
             }
             | membership ISLT zow_or_equals arithmetic {
-                if ( $3 )   { $$ = add_binop( node_kind::t_lt , { $1 , $3 } ); }
-                else        { $$ = add_binop( node_kind::t_ltoe , { $1 , $3 } ); }
+                if ( $3 )   { $$ = add_binop( node_kind::t_lt , { $1 , $4 } ); }
+                else        { $$ = add_binop( node_kind::t_ltoe , { $1 , $4 } ); }
             }
             // | membership zow_is BTWN range
 
@@ -552,6 +550,14 @@ void set_nexts( vec_of_ints & series_of_nodes )
 }
 //  second vector is consumed
 void merge_vectors( vec_of_ints & a, vec_of_ints & b )
+{
+    a.insert(
+        a.end(),
+        std::make_move_iterator(b.begin()),
+        std::make_move_iterator(b.end())
+    );
+}
+void merge_vectors( std::vector<std::string> & a, std::vector<std::string> & b )
 {
     a.insert(
         a.end(),

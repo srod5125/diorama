@@ -29,9 +29,12 @@ spec::token::token( node_kind kind , std::string & name ) : next(0)
 
 void print_children( const std::vector<int> & children )
 {
-    for ( const auto e : children )
-    {
-        LOG_NNL( elements[ e ].id );
+    if ( ! children.empty() ) {
+        LOG_NNL("->");
+        for ( const auto e : children )
+        {
+            LOG_NNL( elements[ e ].id );
+        }
     }
     LOG();
 }
@@ -42,12 +45,12 @@ void print_elements( void )
 
     for ( const auto & e : elements  ) {
 
-        LOG_NNL( node_to_name.at( e.kind ) );
+        LOG_NNL( e.id , node_to_name.at( e.kind ) );
 
         switch ( e.kind )
         {
             case module: {
-                LOG_NNL( "spec size: ", std::get<spec::spec_parts>(e.val).data.size() );
+                LOG_NNL( "data size: ", std::get<spec::spec_parts>(e.val).data.size() );
                 LOG_NNL( "body size: ", std::get<spec::spec_parts>(e.val).body.size() );
                 LOG_NNL( "assert size: ", std::get<spec::spec_parts>(e.val).assertions.size() );
             }; break;
@@ -187,7 +190,7 @@ void print_elements( void )
                 assert(false);
             } break;
         }
-        if ( e.next != 0 ) LOG_NNL( e.next );
+        if ( e.next != 0 ) LOG_NNL( "next:", e.next );
         print_children( e.children );
     }
 }
