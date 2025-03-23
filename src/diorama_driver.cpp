@@ -1,3 +1,4 @@
+#include "aux.hpp"
 #include "parser.hpp"
 #include "diorama_driver.hpp"
 
@@ -59,7 +60,8 @@ void calcxx_driver::set_nexts( vec_of_ints & series_of_nodes )
 {
     const int curr_node = series_of_nodes[0];
     int curr_el = this->s_file.elems[ curr_node ].id;
-    for( int next_node = 1; next_node < series_of_nodes.size(); next_node += 1 )
+    int next_node = 1;
+    for(std::size_t i = 1 ; i < series_of_nodes.size(); i += 1, next_node += 1 )
     {
         int next_el = this->s_file.elems[ series_of_nodes[ next_node ] ].id;
 

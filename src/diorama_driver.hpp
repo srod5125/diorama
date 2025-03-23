@@ -35,6 +35,7 @@ class calcxx_driver
     int add_binop( node_kind op, const vec_of_ints & params );
     int add_unop( node_kind op, int node );
     void set_nexts( vec_of_ints & series_of_nodes );
+
 };
 
 

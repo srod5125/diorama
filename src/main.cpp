@@ -36,6 +36,7 @@ int main(int argc, char **argv)
     spec::file s_file = std::move( drv.s_file );
 
     s_file.print_elements();
+    s_file.initialize_spec();
 
 
     return status::ok;

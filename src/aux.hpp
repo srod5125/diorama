@@ -7,8 +7,11 @@
 #include <string>
 #include <variant>
 #include <utility>
+#include <memory>
 
 #include <cvc5/cvc5.h>
+
+#include "hash_info.hpp"
 
 namespace spec
 {
@@ -81,10 +84,16 @@ namespace spec
 
     struct file
     {
-        std::vector<token> elems;
+        std::vector< token > elems;
+
+        std::unique_ptr< cvc5::TermManager > tm;
+        std::unique_ptr< cvc5::Solver > slv;
+
+        std::unordered_map<std::string_view, cvc5::Sort, sort_name_hash, sort_name_equal> known_sorts;
 
 
         void print_elements( void );
+        void initialize_spec( void );
     };
 
 }
@@ -137,7 +146,6 @@ const std::unordered_map< spec::node_kind , std::string_view > node_to_name = {
 #include <memory>
 #include <vector>
 #include <unordered_map>
-#include "hash_info.hpp"
 
 enum PHASE {
   generate_invariants,
@@ -161,7 +169,6 @@ struct Spec_File {
   std::unique_ptr<cvc5::Solver>     slv;
   std::unique_ptr<cvc5::TermManager> tm;
 
-std::unordered_map<std::string_view, cvc5::Sort, sort_name_hash, sort_name_equal> known_sorts;
 
 
 this->slv->setOption("produce-models", "true");

@@ -189,3 +189,15 @@ void spec::file::print_elements( void )
         LOG();
     }
 }
+
+
+
+void spec::file::initialize_spec()
+{
+    this->tm  = std::make_unique< cvc5::TermManager >();
+    this->slv = std::make_unique< cvc5::Solver >( *this->tm  );
+
+    this->known_sorts["int"]  = this->tm->getIntegerSort();
+    this->known_sorts["bool"] = this->tm->getBooleanSort();
+
+}
