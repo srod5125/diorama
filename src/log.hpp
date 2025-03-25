@@ -39,6 +39,9 @@ void LOG_ERR (Ts && ... inputs) {
 }
 
 
+#define TODO(message) LOG( "TODO: " , __FILE_NAME__ , __LINE__ , message)
+// __FILE_NAME__ is clang only
+
 enum status { ok = 0, err = 1};
 
 #endif

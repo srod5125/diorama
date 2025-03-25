@@ -241,7 +241,7 @@ named_decl : WORD in_or_is WORD {
     var_val_pair.second = std::string( $3 );
 
     spec::token t = spec::token( node_kind::named_decl );
-    t.val  = var_val_pair;
+    t.val  = std::move( var_val_pair );
 
     $$ = drv.add_to_elements( std::move(t) );
 }

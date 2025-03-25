@@ -28,7 +28,6 @@ namespace spec
         enum_def,
         members_init,
         word_to_struct,
-        int_val,
         rule,
         when_block, then_block,
         t_and, t_or, t_xor, t_not,
@@ -94,6 +93,7 @@ namespace spec
 
         void print_elements( void );
         void initialize_spec( void );
+        void process_primitives( void );
     };
 
 }
@@ -107,7 +107,6 @@ const std::unordered_map< spec::node_kind , std::string_view > node_to_name = {
     { spec::node_kind::enum_def , "enum_def" },
     { spec::node_kind::members_init , "members_init" },
     { spec::node_kind::word_to_struct , "word_to_struct" },
-    { spec::node_kind::int_val , "int_val" },
     { spec::node_kind::rule , "rule" },
     { spec::node_kind::when_block , "when_block" },
     { spec::node_kind::then_block , "then_block" },
@@ -140,51 +139,5 @@ const std::unordered_map< spec::node_kind , std::string_view > node_to_name = {
     { spec::node_kind::never_assert , "never_assert" },
     { spec::node_kind::always_assert , "always_assert" },
 };
-
-/*
-
-#include <memory>
-#include <vector>
-#include <unordered_map>
-
-enum PHASE {
-  generate_invariants,
-  hoare_checks,
-  end
-};
-
-struct Spec_File {
-    std::vector<cvc5::Term> members;
-    std::vector<cvc5::Term> next_members;
-    cvc5::Term pre;
-    cvc5::Term trans;
-    cvc5::Term post;
-
-    int never_count;
-    int always_count;
-};
-
-
-// constraint solver fields
-  std::unique_ptr<cvc5::Solver>     slv;
-  std::unique_ptr<cvc5::TermManager> tm;
-
-
-
-this->slv->setOption("produce-models", "true");
-//this->slv->setOption("output", "incomplete");
-this->slv->setOption("incremental", "true");
-this->slv->setOption("sygus", "true");
-
-this->slv->setLogic("ALL");
-
-//adding known sorts
-this->known_sorts["int"]  = this->tm->getIntegerSort();
-this->known_sorts["bool"] = this->tm->getBooleanSort();
-
-this->spec.never_count  = 1;
-this->spec.always_count = 1;
-
-*/
 
 #endif
