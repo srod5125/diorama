@@ -429,6 +429,7 @@ set_opers  : membership { $$ = $1; }
            | set_opers UNION membership { $$ = drv.add_binop( node_kind::t_union , { $1 , $3 } ); }
            | set_opers INTERSECT membership { $$ = drv.add_binop( node_kind::t_intersect , { $1 , $3 } ); }
            | set_opers DIFF membership { $$ = drv.add_binop( node_kind::t_diff , { $1 , $3 } ); }
+           //TODO: rename is in into is member?
            | set_opers ISIN membership { $$ = drv.add_binop( node_kind::t_isin , { $1 , $3 } ); }
            | set_opers ISSUB membership { $$ = drv.add_binop( node_kind::t_issub , { $1 , $3 } ); }
            | COMP set_opers { $$ = drv.add_unop( node_kind::t_compliment , $2 ); }

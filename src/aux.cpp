@@ -313,76 +313,167 @@ void spec::file::process_primitives( void )
 
             };
             case rule: {
+/*
+// first child is when block, rest are then blocks
+t.children.push_back( $4 );
+merge_vectors( t.children , $5 );
+*/
 
             }; break;
             case when_block: {
+                quant_int quantifier = std::get< quant_int >( e.val );
 
+                std::vector< cvc5::Term > list_of_exprs;
+
+                for ( const int c : e.children )
+                {
+                    list_of_exprs.push_back( this->elems[ c ].term );
+                }
+
+                cvc5::Term when;
+                switch ( quantifier.first )
+                {
+                    case quant::any: {
+                        if ( list_of_exprs.size() > 1 )
+                        {
+                            when = this->tm->mkTerm( cvc5::Kind::OR, list_of_exprs );
+                        }
+                        else
+                        {
+                            when = list_of_exprs[0];
+                        }
+                    } break;
+                    case quant::all: {
+                        if ( list_of_exprs.size() > 1 )
+                        {
+                            when = this->tm->mkTerm( cvc5::Kind::AND, list_of_exprs );
+                        }
+                        else
+                        {
+                            when = list_of_exprs[0];
+                        }
+                    } break;
+                    case quant::at_least: {
+                        TODO("sum if else for each expr then if sum is greater then given threshold");
+                    } break;
+                    case quant::at_most: {
+                        TODO("sum if else for each expr then if sum is greater then given threshold");
+                    } break;
+                    case quant::always: {
+                        when = this->tm->mkTrue();
+                    } break;
+                }
+                e.term = when;
             }; break;
             case then_block: {
 
             }; break;
             case t_and: {
-
+                e.term = this->tm->mkTerm(
+                    cvc5::Kind::AND,
+                    { this->elems[ e.children[0] ].term , this->elems[ e.children[1] ].term  } );
             }; break;
             case t_or: {
-
+                e.term = this->tm->mkTerm(
+                    cvc5::Kind::OR,
+                    { this->elems[ e.children[0] ].term , this->elems[ e.children[1] ].term  } );
             }; break;
             case t_xor: {
-
+                e.term = this->tm->mkTerm(
+                    cvc5::Kind::XOR,
+                    { this->elems[ e.children[0] ].term , this->elems[ e.children[1] ].term  } );
             }; break;
             case t_not: {
-
+                e.term = this->tm->mkTerm(
+                    cvc5::Kind::NOT,
+                    { this->elems[ e.children[0] ].term } );
             }; break;
             case t_equal: {
-
+                e.term = this->tm->mkTerm(
+                    cvc5::Kind::EQUAL,
+                    { this->elems[ e.children[0] ].term , this->elems[ e.children[1] ].term  } );
+                TODO("eventually add datatype equality");
             }; break;
             case t_not_equal: {
-
+                e.term = this->tm->mkTerm(
+                    cvc5::Kind::DISTINCT,
+                    { this->elems[ e.children[0] ].term , this->elems[ e.children[1] ].term  } );
             }; break;
             case t_union: {
-
+                e.term = this->tm->mkTerm(
+                    cvc5::Kind::SET_UNION,
+                    { this->elems[ e.children[0] ].term , this->elems[ e.children[1] ].term  } );
+                TODO("check sort then do union type");
             }; break;
             case t_intersect: {
-
+                e.term = this->tm->mkTerm(
+                    cvc5::Kind::SET_INTER,
+                    { this->elems[ e.children[0] ].term , this->elems[ e.children[1] ].term  } );
             }; break;
             case t_diff: {
-
+                e.term = this->tm->mkTerm(
+                    cvc5::Kind::SET_MINUS,
+                    { this->elems[ e.children[0] ].term , this->elems[ e.children[1] ].term  } );
             }; break;
             case t_isin: {
-
+                e.term = this->tm->mkTerm(
+                    cvc5::Kind::SET_MEMBER,
+                    { this->elems[ e.children[0] ].term , this->elems[ e.children[1] ].term  } );
             }; break;
             case t_issub: {
-
+                e.term = this->tm->mkTerm(
+                    cvc5::Kind::SET_SUBSET,
+                    { this->elems[ e.children[0] ].term , this->elems[ e.children[1] ].term  } );
             }; break;
             case t_compliment: {
-
+                e.term = this->tm->mkTerm(
+                    cvc5::Kind::SET_COMPLEMENT,
+                    { this->elems[ e.children[0] ].term } );
             }; break;
             case t_gt: {
-
+                e.term = this->tm->mkTerm(
+                    cvc5::Kind::GT,
+                    { this->elems[ e.children[0] ].term , this->elems[ e.children[1] ].term  } );
             }; break;
             case t_gtoe: {
-
+                e.term = this->tm->mkTerm(
+                    cvc5::Kind::GEQ,
+                    { this->elems[ e.children[0] ].term , this->elems[ e.children[1] ].term  } );
             }; break;
             case t_lt: {
-
+                e.term = this->tm->mkTerm(
+                    cvc5::Kind::LT,
+                    { this->elems[ e.children[0] ].term , this->elems[ e.children[1] ].term  } );
             }; break;
             case t_ltoe: {
-
+                e.term = this->tm->mkTerm(
+                    cvc5::Kind::LT,
+                    { this->elems[ e.children[0] ].term , this->elems[ e.children[1] ].term  } );
             }; break;
             case t_add: {
-
+                e.term = this->tm->mkTerm(
+                    cvc5::Kind::ADD,
+                    { this->elems[ e.children[0] ].term , this->elems[ e.children[1] ].term  } );
             }; break;
             case t_minus : {
-
+                e.term = this->tm->mkTerm(
+                    cvc5::Kind::SUB,
+                    { this->elems[ e.children[0] ].term , this->elems[ e.children[1] ].term  } );
             }; break;
             case t_multiply: {
-
+                e.term = this->tm->mkTerm(
+                    cvc5::Kind::MULT,
+                    { this->elems[ e.children[0] ].term , this->elems[ e.children[1] ].term  } );
             }; break;
             case t_divide : {
-
+                e.term = this->tm->mkTerm(
+                    cvc5::Kind::DIVISION,
+                    { this->elems[ e.children[0] ].term , this->elems[ e.children[1] ].term  } );
             }; break;
             case t_negative: {
-
+                e.term = this->tm->mkTerm(
+                    cvc5::Kind::NEG,
+                    { this->elems[ e.children[0] ].term  } );
             }; break;
             case atom: {
                 if ( std::holds_alternative< int >( e.val ) )
