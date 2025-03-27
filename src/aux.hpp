@@ -52,8 +52,8 @@ namespace spec
     using quant_int   =  std::pair< quant, int >;
 
     using atom_var = std::variant<
-        spec_parts,
         string_pair,
+        spec_parts,
         std::vector< std::string >,
         int,
         bool,
@@ -72,7 +72,9 @@ namespace spec
         atom_var val;
         int next;
 
+        // TODO: maybe wrap in union
         cvc5::Term term;
+        cvc5::Sort sort;
 
         token( );
         token( node_kind kind );
@@ -88,12 +90,15 @@ namespace spec
         std::unique_ptr< cvc5::TermManager > tm;
         std::unique_ptr< cvc5::Solver > slv;
 
-        std::unordered_map<std::string_view, cvc5::Sort, sort_name_hash, sort_name_equal> known_sorts;
-
+        std::unordered_map<std::string_view, cvc5::Sort, name_hash, name_equal> known_sorts;
+        std::unordered_map<std::string_view, cvc5::Term, name_hash, name_equal> members;
 
         void print_elements( void );
         void initialize_spec( void );
         void process_primitives( void );
+
+        //helpers
+        cvc5::Term eval_atom( const spec::atom_var & val);
     };
 
 }

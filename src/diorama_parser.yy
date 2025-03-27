@@ -274,13 +274,14 @@ members_init : START FOR MEMBERS IS basic_init END START {
 }
 
 array_map_init : wom_structure_mapping
-basic_init : wom_word_to_structure_mapping { $$ = $1; }
+basic_init : wom_word_to_structure_mapping { $$ = std::move( $1 ); }
 
 wom_structure_mapping  : wom_structure_mapping COMMA structure_mapping | structure_mapping
 structure_mapping : structure ASSIGN structure
 
 wom_word_to_structure_mapping : wom_word_to_structure_mapping COMMA word_to_structure
-                              | word_to_structure
+                                    { $1.push_back( $3 ); merge_vectors( $$ , $1 ); }
+                                | word_to_structure { $$.push_back( $1 ); }
 
 word_to_structure :  WORD ASSIGN structure {
     spec::token t = spec::token( node_kind::word_to_struct , std::string( $1 ) );
@@ -387,8 +388,7 @@ zow_filter : %empty | filter
 filter : SUCH THAT expr
 
 assignment : name_sel TIC ASSIGN expr {
-    spec::token t = spec::token( node_kind::assignment );
-    t.val  = std::move( $1 );
+    spec::token t = spec::token( node_kind::assignment , std::move( $1 ) );
     t.next = $4;
 
     $$ = drv.add_to_elements( std::move(t) );

@@ -60,10 +60,10 @@ void spec::file::print_elements( void )
 
             }; break;
             case word_to_struct: {
-                if ( std::holds_alternative<int>(e.val) ) { LOG_NNL("int"); }
-                else if ( std::holds_alternative<bool>(e.val) ) { LOG_NNL("bool"); }
-                else if ( std::holds_alternative<std::string>(e.val) ) { LOG_NNL("string"); }
-            }; break;
+                if ( std::holds_alternative<int>(e.val) ) { LOG_NNL( std::get<int>(e.val) ); }
+                else if ( std::holds_alternative<bool>(e.val) ) { LOG_NNL( std::get<bool>(e.val) ); }
+                else if ( std::holds_alternative<std::string>(e.val) ) { LOG_NNL( std::get<std::string>(e.val) ); }
+            };
             case rule: {
 
             }; break;
@@ -162,7 +162,8 @@ void spec::file::print_elements( void )
 
             }; break;
             case assignment: {
-                LOG_NNL( std::get<std::string>(e.val) );
+                LOG_NNL( e.name, ":= " );
+                TODO( "get val of assignemnt" );
             }; break;
             case never_assert: {
 
@@ -190,7 +191,6 @@ void spec::file::print_elements( void )
 }
 
 
-
 void spec::file::initialize_spec()
 {
     this->tm  = std::make_unique< cvc5::TermManager >();
@@ -210,80 +210,245 @@ void spec::file::initialize_spec()
 
 void spec::file::process_primitives( void )
 {
-
     std::vector< int > unkown_records;
 
     for( spec::token & e: this->elems )
     {
-        if ( e.kind == atom )
+        switch ( e.kind )
         {
-            if ( std::holds_alternative< int >( e.val ) )
-            {
-                int x = std::get< int >( e.val );
-                e.term = this->tm->mkInteger( x );
-            }
-            else if ( std::holds_alternative< bool >( e.val ) )
-            {
-                bool x = std::get< bool >( e.val );
-                e.term = this->tm->mkBoolean( x );
-            }
-        }
-        else if ( e.kind == record_def )
-        {
-            bool all_sorts_known = true;
-            for ( const int & decl : e.children  )
-            {
-                assert( this->elems[ decl ].kind == named_decl );
-                //if "type" in named decl is known
-                if( ! this->known_sorts.contains( std::get< string_pair >(this->elems[ decl ].val).second ) )
+            case module: {
+
+            }; break;
+            case named_decl: {
+
+            }; break;
+            case record_def: {
+                bool all_sorts_known = true;
+                for ( const int & decl : e.children  )
                 {
-                    all_sorts_known = false;
-                    unkown_records.push_back( e.id );
-                    break;
+                    assert( this->elems[ decl ].kind == named_decl );
+                    //if "type" in named decl is known
+                    if( ! this->known_sorts.contains( std::get< string_pair >(this->elems[ decl ].val).second ) )
+                    {
+                        all_sorts_known = false;
+                        unkown_records.push_back( e.id );
+                        break;
+                    }
                 }
-            }
-            if ( all_sorts_known )
-            {
-                std::vector< std::pair< std::string , cvc5::Sort > > fields;
+                if ( all_sorts_known )
+                {
+                    std::vector< std::pair< std::string , cvc5::Sort > > fields;
+                    for ( const int & decl : e.children  )
+                    {
+                        assert( this->elems[ decl ].kind == named_decl );
+
+                        std::pair< std::string , cvc5::Sort > field;
+                        field.first = std::move( std::get< string_pair >(this->elems[ decl ].val).first );
+                        std::string sort_label = std::move( std::get< string_pair >(this->elems[ decl ].val).second );
+                        field.second = this->known_sorts[ sort_label ];
+
+                        fields.emplace_back( field );
+                    }
+
+                    this->known_sorts[ e.name ] = this->tm->mkRecordSort( fields );
+                }
+            }; break;
+            case members_def: {
                 for ( const int & decl : e.children  )
                 {
                     assert( this->elems[ decl ].kind == named_decl );
 
-                    std::pair< std::string , cvc5::Sort > field;
-                    field.first = std::move( std::get< string_pair >(this->elems[ decl ].val).first );
-                    std::string temp_sort = std::move( std::get< string_pair >(this->elems[ decl ].val).second );
-                    field.second = this->known_sorts[ temp_sort ];
+                    std::string mem_name = std::move( std::get< string_pair >(this->elems[ decl ].val).first );
+                    std::string sort_label = std::move( std::get< string_pair >(this->elems[ decl ].val).second );
+                    cvc5::Sort sort = this->known_sorts[ sort_label ];
 
-                    fields.emplace_back( field );
+                    cvc5::Term mem_var = this->tm->mkVar( sort );
+
+                    this->members[ mem_name ] = mem_var;
                 }
 
-                this->known_sorts[ e.name ] = this->tm->mkRecordSort( fields );
-            }
-        }
-        else if ( e.kind == members_def )
-        {
-            std::vector< std::pair< std::string , cvc5::Sort > > fields;
-            for ( const int & decl : e.children  )
-            {
-                assert( this->elems[ decl ].kind == named_decl );
+            }; break;
+            case enum_def: {
+                TODO("enum def datatype");
+            }; break;
+            case members_init: {
+                std::vector< cvc5::Term > init_terms;
+                for ( const int c : e.children )
+                {
+                    assert( this->elems[ c ].kind == word_to_struct );
 
-                std::pair< std::string , cvc5::Sort > field;
-                field.first = std::move( std::get< string_pair >(this->elems[ decl ].val).first );
-                std::string temp_sort = std::move( std::get< string_pair >(this->elems[ decl ].val).second );
-                field.second = this->known_sorts[ temp_sort ];
+                    cvc5::Term mem_var = this->members[ this->elems[ c ].name ];
+                    cvc5::Term val     = this->eval_atom( this->elems[ c ].val );
 
-                fields.emplace_back( field );
-            }
+                    cvc5::Term t = this->tm->mkTerm(
+                        cvc5::Kind::EQUAL,
+                        { mem_var , val }
+                    );
+                    init_terms.emplace_back( t );
+                }
 
-            this->known_sorts[ "members_sort" ] = this->tm->mkRecordSort( fields );
-        }
-        else if ( e.kind == enum_def )
-        {
-            TODO("enum def datatype");
+                std::vector< cvc5::Term > temp_members;
+                for ( const auto & [ _ , term ] : this->members )
+                {
+                    temp_members.push_back( term );
+                }
+                cvc5::Term init_term;
+                if ( init_terms.size() > 1 )
+                {
+                    init_term = this->tm->mkTerm( cvc5::Kind::AND, { init_terms } );
+                }
+                else
+                {
+                    init_term = *init_terms.begin();
+                }
+                e.term = this->slv->defineFun(
+                    "members_init",
+                    temp_members,
+                    this->tm->getBooleanSort(),
+                    init_term
+                );
+
+            }; break;
+            case word_to_struct: {
+
+            };
+            case rule: {
+
+            }; break;
+            case when_block: {
+
+            }; break;
+            case then_block: {
+
+            }; break;
+            case t_and: {
+
+            }; break;
+            case t_or: {
+
+            }; break;
+            case t_xor: {
+
+            }; break;
+            case t_not: {
+
+            }; break;
+            case t_equal: {
+
+            }; break;
+            case t_not_equal: {
+
+            }; break;
+            case t_union: {
+
+            }; break;
+            case t_intersect: {
+
+            }; break;
+            case t_diff: {
+
+            }; break;
+            case t_isin: {
+
+            }; break;
+            case t_issub: {
+
+            }; break;
+            case t_compliment: {
+
+            }; break;
+            case t_gt: {
+
+            }; break;
+            case t_gtoe: {
+
+            }; break;
+            case t_lt: {
+
+            }; break;
+            case t_ltoe: {
+
+            }; break;
+            case t_add: {
+
+            }; break;
+            case t_minus : {
+
+            }; break;
+            case t_multiply: {
+
+            }; break;
+            case t_divide : {
+
+            }; break;
+            case t_negative: {
+
+            }; break;
+            case atom: {
+                if ( std::holds_alternative< int >( e.val ) )
+                {
+                    int x = std::get< int >( e.val );
+                    e.term = this->tm->mkInteger( x );
+                }
+                else if ( std::holds_alternative< bool >( e.val ) )
+                {
+                    bool x = std::get< bool >( e.val );
+                    e.term = this->tm->mkBoolean( x );
+                }
+                else if ( std::holds_alternative< std::string >( e.val ) )
+                {
+                    std::string user_defined_record = std::move( std::get< std::string >( e.val ) );
+                    e.sort = this->known_sorts[ user_defined_record ];
+                }
+            }; break;
+            case if_stmt: {
+
+            }; break;
+            case else_if_stmt: {
+
+            }; break;
+            case else_stmt: {
+
+            }; break;
+            case assignment: {
+
+            }; break;
+            case never_assert: {
+
+            }; break;
+            case always_assert: {
+
+            }; break;
+            case unkown: {
+                LOG_ERR("unkown node, cannot process"); assert(false);
+            } break;
         }
 
     }
 
-    TODO("solve unkown_records recursively for each unkown record, simply serach over all elems until record_def & name = unkown def, recusively");
+    TODO("solve unkown_records recursively for each unkown record\n, \
+         simply serach over all elems until \nrecord_def & name = unkown def, recusively");
 
+}
+
+cvc5::Term spec::file::eval_atom( const spec::atom_var & val )
+{
+    if ( std::holds_alternative< int >( val ) )
+    {
+        return this->tm->mkInteger( std::get< int >(val) );
+    }
+    else if ( std::holds_alternative< bool >( val ) )
+    {
+        return this->tm->mkBoolean( std::get< bool >(val) );
+    }
+    else if ( std::holds_alternative< std::string >( val ) )
+    {
+        LOG( std::get<std::string>(val) );
+        TODO("return user defined sort");
+    }
+    else
+    {
+        LOG_ERR("unreachable node in eval");
+        assert(false);
+    }
 }
