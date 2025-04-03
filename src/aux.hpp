@@ -92,8 +92,8 @@ namespace spec
         std::unique_ptr< cvc5::TermManager > tm;
         std::unique_ptr< cvc5::Solver > slv;
 
-        std::unordered_map<std::string_view, cvc5::Sort, name_hash, name_equal> known_sorts;
-        std::unordered_map<std::string_view, cvc5::Term, name_hash, name_equal> members;
+        std::unordered_map<std::string, cvc5::Sort, name_hash, name_equal> known_sorts;
+        std::unordered_map<std::string, cvc5::Term, name_hash, name_equal> members;
 
         int rule_count;
 

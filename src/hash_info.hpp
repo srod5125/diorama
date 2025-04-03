@@ -13,12 +13,7 @@
 // CITATION: https://stackoverflow.com/questions/8627698/case-insensitive-stl-containers-e-g-stdunordered-set
 struct name_hash {
     std::size_t operator()(const std::string_view & key) const {
-        const std::hash<char> hash_fn;
-        std::size_t h = 0;
-        for (const char & c : key) {
-            h ^= hash_fn(c);
-        }
-        return h;
+        return std::hash<std::string_view>()(key) ;
     }
 };
 struct name_equal {
@@ -30,7 +25,9 @@ struct name_equal {
         //     return false;
         // }
         return left.size() == right.size() &&
-        std::equal ( left.begin() , left.end() , right.begin() ,
+        std::equal (
+            left.begin() , left.end() ,
+            right.begin() ,
             []( char a , char b ) {
                 return std::tolower(a) == std::tolower(b);
         }

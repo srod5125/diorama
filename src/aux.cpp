@@ -494,9 +494,9 @@ merge_vectors( t.children , $5 );
                 }
                 else if ( std::holds_alternative< std::string >( e.val ) )
                 {
-                    std::string_view mem = std::string_view( std::get< std::string >( e.val ) );
-                    LOG("auto mem:",mem);
-                    e.term = this->members[ mem ];
+                    // std::string_view mem = std::string_view( std::get< std::string >( e.val ) );
+                    // LOG("auto mem:",mem);
+                    e.term = this->members[ std::get< std::string >( e.val ) ];
                 }
             }; break;
             case if_stmt: {
