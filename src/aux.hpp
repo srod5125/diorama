@@ -76,12 +76,14 @@ namespace spec
         cvc5::Term term;
         cvc5::Sort sort;
 
-        token( );
+        token( void );
         token( node_kind kind );
         token( node_kind kind , std::string & name );
         token( node_kind kind , std::string && name );
 
     };
+
+    const int undefined_id = -1;
 
     struct file
     {
@@ -93,12 +95,16 @@ namespace spec
         std::unordered_map<std::string_view, cvc5::Sort, name_hash, name_equal> known_sorts;
         std::unordered_map<std::string_view, cvc5::Term, name_hash, name_equal> members;
 
+        int rule_count;
+
         void print_elements( void );
         void initialize_spec( void );
         void process_primitives( void );
 
         //helpers
-        cvc5::Term eval_atom( const spec::atom_var & val);
+        cvc5::Term eval_atom( const spec::atom_var & val );
+        std::vector< cvc5::Term > next_stmts( int id );
+        cvc5::Term and_all( const std::vector<cvc5::Term> & vec_terms );
     };
 
 }

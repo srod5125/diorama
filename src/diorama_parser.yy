@@ -235,6 +235,7 @@ declaration : named_decl DOT { $$ = $1; }
             // | array_decl DOT
             // | tuple_decl DOT
 
+// TODO: second word should be type not atom
 named_decl : WORD in_or_is WORD {
     std::pair< std::string, std::string > var_val_pair;
     var_val_pair.first  = std::string( $1 );
@@ -350,7 +351,7 @@ if_stmt : IF expr THEN wom_stmts zom_else_if zow_else END IF {
 
     spec::token t = spec::token( node_kind::if_stmt );
     t.val = $2;
-    t.children.push_back( drv.s_file.elems[ $4[0] ].id );
+    t.next = drv.s_file.elems[ $4[0] ].id;
     drv.set_nexts( $4 );
     merge_vectors( t.children, $5 );
     if ( $6 != -1 ) { t.children.push_back( $6 ); }
@@ -369,12 +370,13 @@ else_if : ELSE IF expr THEN COLON wom_stmts {
 
     $$ = drv.add_to_elements( std::move(t) );
 }
-zow_else : %empty { $$ = -1; }
+zow_else : %empty { $$ = spec::undefined_id; }
          | else   { $$ = $1; }
 
 else : ELSE COLON wom_stmts {
 
     spec::token t = spec::token( node_kind::else_stmt );
+    t.val  = spec::undefined_id;
     t.next = drv.s_file.elems[ $3[0] ].id;
     drv.set_nexts( $3 );
 
@@ -389,7 +391,7 @@ filter : SUCH THAT expr
 
 assignment : name_sel TIC ASSIGN expr {
     spec::token t = spec::token( node_kind::assignment , std::move( $1 ) );
-    t.next = $4;
+    t.val = $4;
 
     $$ = drv.add_to_elements( std::move(t) );
 }

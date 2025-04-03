@@ -9,18 +9,18 @@
 #include "aux.hpp"
 #include "log.hpp"
 
-spec::token::token( node_kind kind ) : next(0)
+spec::token::token( node_kind kind ) : next( spec::undefined_id )
 {
     this->kind = kind;
 }
 
-spec::token::token( node_kind kind , std::string && name ) : next(0)
+spec::token::token( node_kind kind , std::string && name ) : next( spec::undefined_id )
 {
     this->kind = kind;
     this->name = name;
 }
 
-spec::token::token( node_kind kind , std::string & name ) : next(0)
+spec::token::token( node_kind kind , std::string & name ) : next( spec::undefined_id )
 {
     this->kind = kind;
     this->name = std::move( name );
@@ -162,8 +162,8 @@ void spec::file::print_elements( void )
 
             }; break;
             case assignment: {
-                LOG_NNL( e.name, ":= " );
-                TODO( "get val of assignemnt" );
+                LOG_NNL( e.name, ":= " ,"@", std::get<int>(e.val) );
+                TODO("get val ");
             }; break;
             case never_assert: {
 
@@ -191,7 +191,7 @@ void spec::file::print_elements( void )
 }
 
 
-void spec::file::initialize_spec()
+void spec::file::initialize_spec( void )
 {
     this->tm  = std::make_unique< cvc5::TermManager >();
     this->slv = std::make_unique< cvc5::Solver >( *this->tm  );
@@ -206,6 +206,7 @@ void spec::file::initialize_spec()
 
     this->slv->setLogic("ALL");
 
+    this->rule_count = 0;
 }
 
 void spec::file::process_primitives( void )
@@ -262,9 +263,7 @@ void spec::file::process_primitives( void )
                     std::string sort_label = std::move( std::get< string_pair >(this->elems[ decl ].val).second );
                     cvc5::Sort sort = this->known_sorts[ sort_label ];
 
-                    cvc5::Term mem_var = this->tm->mkVar( sort );
-
-                    this->members[ mem_name ] = mem_var;
+                    this->members[ mem_name ] = this->tm->mkVar( sort , mem_name );
                 }
 
             }; break;
@@ -292,15 +291,7 @@ void spec::file::process_primitives( void )
                 {
                     temp_members.push_back( term );
                 }
-                cvc5::Term init_term;
-                if ( init_terms.size() > 1 )
-                {
-                    init_term = this->tm->mkTerm( cvc5::Kind::AND, { init_terms } );
-                }
-                else
-                {
-                    init_term = *init_terms.begin();
-                }
+                cvc5::Term init_term = this->and_all( init_terms );
                 e.term = this->slv->defineFun(
                     "members_init",
                     temp_members,
@@ -334,24 +325,18 @@ merge_vectors( t.children , $5 );
                 switch ( quantifier.first )
                 {
                     case quant::any: {
+                        when = this->and_all( list_of_exprs );
                         if ( list_of_exprs.size() > 1 )
                         {
                             when = this->tm->mkTerm( cvc5::Kind::OR, list_of_exprs );
                         }
                         else
                         {
-                            when = list_of_exprs[0];
+                            when = *list_of_exprs.begin();
                         }
                     } break;
                     case quant::all: {
-                        if ( list_of_exprs.size() > 1 )
-                        {
-                            when = this->tm->mkTerm( cvc5::Kind::AND, list_of_exprs );
-                        }
-                        else
-                        {
-                            when = list_of_exprs[0];
-                        }
+                        when = this->and_all( list_of_exprs );
                     } break;
                     case quant::at_least: {
                         TODO("sum if else for each expr then if sum is greater then given threshold");
@@ -366,6 +351,24 @@ merge_vectors( t.children , $5 );
                 e.term = when;
             }; break;
             case then_block: {
+                std::vector< cvc5::Term > stmts = this->next_stmts( e.next );
+
+                std::string rule_name;
+                if ( e.name.empty() ) { rule_name = "rule" + std::to_string( this->rule_count ); }
+                else { rule_name = std::move( e.name ); }
+
+                std::vector< cvc5::Term > temp_members;
+                for ( const auto & [ _ , term ] : this->members )
+                {
+                    temp_members.push_back( term );
+                }
+                cvc5::Term then_stmts = this->and_all( stmts );
+                e.term = this->slv->defineFun(
+                    rule_name,
+                    temp_members,
+                    this->tm->getBooleanSort(),
+                    then_stmts
+                );
 
             }; break;
             case t_and: {
@@ -476,6 +479,9 @@ merge_vectors( t.children , $5 );
                     { this->elems[ e.children[0] ].term  } );
             }; break;
             case atom: {
+                if ( e.id == 20 ){
+                    LOG_NNL("x");
+                }
                 if ( std::holds_alternative< int >( e.val ) )
                 {
                     int x = std::get< int >( e.val );
@@ -488,21 +494,58 @@ merge_vectors( t.children , $5 );
                 }
                 else if ( std::holds_alternative< std::string >( e.val ) )
                 {
-                    std::string user_defined_record = std::move( std::get< std::string >( e.val ) );
-                    e.sort = this->known_sorts[ user_defined_record ];
+                    std::string_view mem = std::string_view( std::get< std::string >( e.val ) );
+                    LOG("auto mem:",mem);
+                    e.term = this->members[ mem ];
                 }
             }; break;
             case if_stmt: {
+                std::vector< cvc5::Term > true_branch_stmts = this->next_stmts( e.next );
+                // the last else for any branch can always be true since
+                // the default would be x' := x, which is always true
+                cvc5::Term else_branches = this->tm->mkTrue();
 
+                // we must construct the else if in reverse
+                for( auto rev_id = e.children.rbegin(); rev_id != e.children.rend(); rev_id = std::next(rev_id) ) {
+                    int cond_expr_id = std::get<int>( this->elems[ *rev_id ].val );
+
+                    cvc5::Term cond_term =  cond_expr_id != spec::undefined_id
+                                        ?   this->elems[ cond_expr_id ].term
+                                        :   this->tm->mkTrue();
+
+                    else_branches = this->tm->mkTerm(
+                        cvc5::Kind::ITE,{
+                            cond_term,
+                            this->elems[ *rev_id ].term,
+                            else_branches
+                        }
+                    );
+                }
+                int cond_expr_id = std::get< int >( e.val );
+                e.term = this->tm->mkTerm(
+                    cvc5::Kind::ITE, {
+                        this->elems[ cond_expr_id ].term,
+                        this->and_all( true_branch_stmts  ),
+                        else_branches
+                    }
+                );
             }; break;
             case else_if_stmt: {
-
+                assert( e.next != spec::undefined_id );
+                std::vector< cvc5::Term > true_branch_stmts = this->next_stmts( e.next );
+                e.term = this->and_all( true_branch_stmts );
             }; break;
             case else_stmt: {
-
+                assert( e.next != spec::undefined_id );
+                std::vector< cvc5::Term > true_branch_stmts = this->next_stmts( e.next );
+                e.term = this->and_all( true_branch_stmts );
             }; break;
             case assignment: {
-
+                int expr_id = std::get<int>( e.val );
+                e.term = this->tm->mkTerm(
+                    cvc5::Kind::EQUAL,
+                    { this->members[ e.name ] , this->elems[ expr_id ].term }
+                );
             }; break;
             case never_assert: {
 
@@ -532,14 +575,37 @@ cvc5::Term spec::file::eval_atom( const spec::atom_var & val )
     {
         return this->tm->mkBoolean( std::get< bool >(val) );
     }
-    else if ( std::holds_alternative< std::string >( val ) )
-    {
-        LOG( std::get<std::string>(val) );
-        TODO("return user defined sort");
-    }
+    // else if ( std::holds_alternative< std::string >( val ) )
+    // {
+    //     LOG( std::get<std::string>(val) );
+    //     TODO("return user defined sort");
+    // }
     else
     {
         LOG_ERR("unreachable node in eval");
         assert(false);
+    }
+}
+
+std::vector< cvc5::Term > spec::file::next_stmts( int id )
+{
+    std::vector< cvc5::Term > stmts;
+    int curr_el =  id;
+    while( curr_el != spec::undefined_id )
+    {
+        stmts.push_back( this->elems[ curr_el ].term );
+        curr_el = this->elems[ curr_el ].next;
+    }
+    return stmts;
+}
+cvc5::Term spec::file::and_all( const std::vector<cvc5::Term> & vec_terms )
+{
+    if ( vec_terms.size() > 1 )
+    {
+        return this->tm->mkTerm( cvc5::Kind::AND, vec_terms );
+    }
+    else
+    {
+        return *vec_terms.begin();
     }
 }
