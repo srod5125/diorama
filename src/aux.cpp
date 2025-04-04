@@ -63,7 +63,7 @@ void spec::file::print_elements( void )
                 if ( std::holds_alternative<int>(e.val) ) { LOG_NNL( std::get<int>(e.val) ); }
                 else if ( std::holds_alternative<bool>(e.val) ) { LOG_NNL( std::get<bool>(e.val) ); }
                 else if ( std::holds_alternative<std::string>(e.val) ) { LOG_NNL( std::get<std::string>(e.val) ); }
-            };
+            }; break;
             case rule: {
 
             }; break;
@@ -302,22 +302,46 @@ void spec::file::process_primitives( void )
             }; break;
             case word_to_struct: {
 
-            };
+            }; break;
             case rule: {
-/*
-// first child is when block, rest are then blocks
-t.children.push_back( $4 );
-merge_vectors( t.children , $5 );
-*/
+                std::string rule_name;
+                if ( e.name.empty() ) { rule_name = "rule" + std::to_string( this->rule_count ); }
+                else { rule_name = std::move( e.name ); }
 
+                std::vector< cvc5::Term > temp_members;
+                for ( const auto & [ _ , term ] : this->members ) {
+                    temp_members.push_back( term );
+                }
+
+                std::vector< cvc5::Term > or_thens;
+                for ( std::size_t then_id = 1; then_id < e.children.size(); then_id += 1 ){
+                    or_thens.push_back( this->elems[ e.children[ then_id ] ].term );
+                }
+                cvc5::Term when_block  = this->elems[ e.children[0] ].term;
+                cvc5::Term then_blocks = this->or_all( or_thens );
+                cvc5::Term no_op       = this->tm->mkTrue();
+
+                cvc5::Term rule_block = this->tm->mkTerm(
+                    cvc5::Kind::ITE,{
+                        when_block,
+                        then_blocks,
+                        no_op
+                    }
+                );
+
+                this->slv->defineFun(
+                    rule_name,
+                    temp_members,
+                    this->tm->getBooleanSort(),
+                    rule_block
+                );
             }; break;
             case when_block: {
                 quant_int quantifier = std::get< quant_int >( e.val );
 
                 std::vector< cvc5::Term > list_of_exprs;
 
-                for ( const int c : e.children )
-                {
+                for ( const int c : e.children ) {
                     list_of_exprs.push_back( this->elems[ c ].term );
                 }
 
@@ -325,15 +349,7 @@ merge_vectors( t.children , $5 );
                 switch ( quantifier.first )
                 {
                     case quant::any: {
-                        when = this->and_all( list_of_exprs );
-                        if ( list_of_exprs.size() > 1 )
-                        {
-                            when = this->tm->mkTerm( cvc5::Kind::OR, list_of_exprs );
-                        }
-                        else
-                        {
-                            when = *list_of_exprs.begin();
-                        }
+                        when = this->or_all( list_of_exprs );
                     } break;
                     case quant::all: {
                         when = this->and_all( list_of_exprs );
@@ -373,29 +389,16 @@ merge_vectors( t.children , $5 );
                     case quant::always: {
                         when = this->tm->mkTrue();
                     } break;
+                    default: {
+                        LOG_ERR("unkown quantifier");
+                        assert(false);
+                    }
                 }
                 e.term = when;
             }; break;
             case then_block: {
                 std::vector< cvc5::Term > stmts = this->next_stmts( e.next );
-
-                std::string rule_name;
-                if ( e.name.empty() ) { rule_name = "rule" + std::to_string( this->rule_count ); }
-                else { rule_name = std::move( e.name ); }
-
-                std::vector< cvc5::Term > temp_members;
-                for ( const auto & [ _ , term ] : this->members )
-                {
-                    temp_members.push_back( term );
-                }
-                cvc5::Term then_stmts = this->and_all( stmts );
-                e.term = this->slv->defineFun(
-                    rule_name,
-                    temp_members,
-                    this->tm->getBooleanSort(),
-                    then_stmts
-                );
-
+                e.term = this->and_all( stmts );
             }; break;
             case t_and: {
                 e.term = this->tm->mkTerm(
@@ -626,12 +629,19 @@ std::vector< cvc5::Term > spec::file::next_stmts( int id )
 }
 cvc5::Term spec::file::and_all( const std::vector<cvc5::Term> & vec_terms )
 {
-    if ( vec_terms.size() > 1 )
-    {
+    if ( vec_terms.size() > 1 ) {
         return this->tm->mkTerm( cvc5::Kind::AND, vec_terms );
     }
-    else
-    {
+    else {
+        return *vec_terms.begin();
+    }
+}
+cvc5::Term spec::file::or_all( const std::vector<cvc5::Term> & vec_terms )
+{
+    if ( vec_terms.size() > 1 ) {
+        return this->tm->mkTerm( cvc5::Kind::OR, vec_terms );
+    }
+    else {
         return *vec_terms.begin();
     }
 }

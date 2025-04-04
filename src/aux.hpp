@@ -105,6 +105,7 @@ namespace spec
         cvc5::Term eval_atom( const spec::atom_var & val );
         std::vector< cvc5::Term > next_stmts( int id );
         cvc5::Term and_all( const std::vector<cvc5::Term> & vec_terms );
+        cvc5::Term or_all( const std::vector<cvc5::Term> & vec_terms );
     };
 
 }
