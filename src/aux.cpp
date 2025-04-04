@@ -339,10 +339,36 @@ merge_vectors( t.children , $5 );
                         when = this->and_all( list_of_exprs );
                     } break;
                     case quant::at_least: {
-                        TODO("sum if else for each expr then if sum is greater then given threshold");
+                        std::vector< cvc5::Term > if_true_one_else_zero;
+                        cvc5::Term one  = this->tm->mkInteger( 1 );
+                        cvc5::Term zero = this->tm->mkInteger( 0 );
+                        for ( const cvc5::Term & expr : list_of_exprs ) {
+                            if_true_one_else_zero.emplace_back(
+                                this->tm->mkTerm( cvc5::Kind::ITE,{
+                                    expr, one, zero
+                                } )
+                            );
+                        }
+                        cvc5::Term threshold = this->tm->mkInteger( quantifier.second );
+                        cvc5::Term sum_of_trues = this->tm->mkTerm( cvc5::Kind::ADD, if_true_one_else_zero );
+
+                        when = this->tm->mkTerm( cvc5::Kind::GEQ, { sum_of_trues, threshold } );
                     } break;
                     case quant::at_most: {
-                        TODO("sum if else for each expr then if sum is greater then given threshold");
+                        std::vector< cvc5::Term > if_true_one_else_zero;
+                        cvc5::Term one  = this->tm->mkInteger( 1 );
+                        cvc5::Term zero = this->tm->mkInteger( 0 );
+                        for ( const cvc5::Term & expr : list_of_exprs ) {
+                            if_true_one_else_zero.emplace_back(
+                                this->tm->mkTerm( cvc5::Kind::ITE,{
+                                    expr, one, zero
+                                } )
+                            );
+                        }
+                        cvc5::Term threshold = this->tm->mkInteger( quantifier.second );
+                        cvc5::Term sum_of_trues = this->tm->mkTerm( cvc5::Kind::ADD, if_true_one_else_zero );
+
+                        when = this->tm->mkTerm( cvc5::Kind::LEQ, { sum_of_trues, threshold } );
                     } break;
                     case quant::always: {
                         when = this->tm->mkTrue();
