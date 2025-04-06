@@ -43,8 +43,8 @@ namespace spec
 
     struct spec_parts
     {
-        std::vector< int > data;
-        std::vector< int > body;
+        std::vector< int > inits;
+        std::vector< int > rules;
         std::vector< int > assertions;
     };
 
@@ -94,6 +94,8 @@ namespace spec
 
         std::unordered_map<std::string, cvc5::Sort, name_hash, name_equal> known_sorts;
         std::unordered_map<std::string, cvc5::Term, name_hash, name_equal> members;
+        std::unordered_map<std::string, cvc5::Term, name_hash, name_equal> members_next;
+
         std::vector< cvc5::Term > members_as_vec;
 
         int rule_count;

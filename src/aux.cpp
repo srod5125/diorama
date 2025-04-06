@@ -38,8 +38,8 @@ void spec::file::print_elements( void ) const
         switch ( e.kind )
         {
             case module: {
-                LOG_NNL( "data size: ", std::get<spec::spec_parts>(e.val).data.size() );
-                LOG_NNL( "body size: ", std::get<spec::spec_parts>(e.val).body.size() );
+                LOG_NNL( "inits size: ", std::get<spec::spec_parts>(e.val).inits.size() );
+                LOG_NNL( "rules size: ", std::get<spec::spec_parts>(e.val).rules.size() );
                 LOG_NNL( "assert size: ", std::get<spec::spec_parts>(e.val).assertions.size() );
             }; break;
             case named_decl: {
@@ -227,6 +227,14 @@ void spec::file::process_primitives( void )
                         this->members_as_vec,
                         this->tm->getBooleanSort()
                     );
+
+                    this->slv->addSygusInvConstraint(
+                        inv_f,
+                        this->elems[ sp.inits[0] ].term,
+                        this->elems[ sp.rules[0] ].term,
+                        this->elems[ sp.assertions[0] ].term
+                    );
+
                 }
                 this->slv->pop();
 
@@ -274,8 +282,11 @@ void spec::file::process_primitives( void )
                     std::string sort_label = std::move( std::get< string_pair >(this->elems[ decl ].val).second );
                     cvc5::Sort sort = this->known_sorts[ sort_label ];
 
-                    cvc5::Term mem = this->tm->mkVar( sort , mem_name );
+                    cvc5::Term mem      = this->tm->mkVar( sort , mem_name );
+                    cvc5::Term mem_next = this->tm->mkVar( sort , mem_name + "next" );
+
                     this->members[ mem_name ] = mem;
+                    this->members_next[ mem_name ] = mem_next;
                     this->members_as_vec.push_back( mem );
                 }
 
@@ -335,10 +346,14 @@ void spec::file::process_primitives( void )
                         no_op
                     }
                 );
+                std::vector< cvc5::Term > temp_mems_and_mems_next = this->members_as_vec;
+                for ( const auto & [ _ , mem_next ] : this->members_next ){
+                    temp_mems_and_mems_next.push_back( mem_next );
+                }
 
-                this->slv->defineFun(
+                e.term = this->slv->defineFun(
                     rule_name,
-                    this->members_as_vec,
+                    temp_mems_and_mems_next,
                     this->tm->getBooleanSort(),
                     rule_block
                 );
@@ -580,7 +595,7 @@ void spec::file::process_primitives( void )
                 int expr_id = std::get<int>( e.val );
                 e.term = this->tm->mkTerm(
                     cvc5::Kind::EQUAL,
-                    { this->members[ e.name ] , this->elems[ expr_id ].term }
+                    { this->members_next[ e.name ] , this->elems[ expr_id ].term }
                 );
             }; break;
             case never_assert: {

@@ -136,8 +136,8 @@ L_BRACE
 R_BRACE
 ;
 
-%type < vec_of_ints > data body zom_assertions
-%type < vec_of_ints > zom_schemes inits zom_rules
+%type < vec_of_ints > defs inits rules assertions
+%type < vec_of_ints > zom_schemes wom_rules
 %type < vec_of_ints > zom_inits wom_word_to_structure_mapping
 %type < vec_of_ints > wom_decleration basic_init
 %type < std::vector< std::string > > wom_enums
@@ -174,25 +174,25 @@ R_BRACE
 
 spec : module
 
-module :  MODULE WORD IS data body zom_assertions END WORD
+module :  MODULE WORD IS defs inits rules assertions END WORD
 {
     spec::token t = spec::token( node_kind::module );
 
     spec_parts sp;
-    sp.data         = std::move( $4 );
-    sp.body         = std::move( $5 );
-    sp.assertions   = std::move( $6 );
+    sp.inits         = std::move( $5 );
+    sp.rules         = std::move( $6 );
+    sp.assertions    = std::move( $7 );
 
     t.val = std::move( sp );
     drv.add_to_elements( std::move(t) );
 }
 
 // TODO: eventually test out of order decleration,
-// TODO: mix data and body under univeral_block
+// TODO: mix defs and body under univeral_block
 
-data           : zom_schemes members_def { $1.push_back( $2 ); merge_vectors( $$ , $1 ); }
-body           : inits zom_rules { merge_vectors( $1 , $2 ); merge_vectors( $$ , $1 );  }
-zom_assertions : %empty | zom_assertions assertion { $1.push_back( $2 ); merge_vectors( $$ , $1 ); }
+defs            : zom_schemes members_def { $1.push_back( $2 ); merge_vectors( $$ , $1 ); }
+rules           : wom_rules { $$ = std::move( $1 );  }
+assertions      : %empty | assertions assertion { $1.push_back( $2 ); merge_vectors( $$ , $1 ); }
 
     /* data & schemes */
 zom_schemes : zom_schemes scheme { $1.push_back( $2 ); merge_vectors( $$ , $1 ); }
@@ -292,7 +292,8 @@ word_to_structure :  WORD ASSIGN structure {
 
 structure : atom { $$ = std::move( $1 ); }
 
-zom_rules   : %empty | zom_rules rule { $1.push_back( $2 ); merge_vectors( $$ , $1 ); }
+wom_rules   : wom_rules rule { $1.push_back( $2 ); merge_vectors( $$ , $1 ); }
+            | rule { $$.push_back( $1 ); }
 
 rule : RULE WORD are_or_is when_block wom_then_blocks END RULE {
     spec::token t = spec::token( node_kind::rule , std::string( $2 ) );
