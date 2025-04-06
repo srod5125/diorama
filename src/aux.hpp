@@ -94,12 +94,17 @@ namespace spec
 
         std::unordered_map<std::string, cvc5::Sort, name_hash, name_equal> known_sorts;
         std::unordered_map<std::string, cvc5::Term, name_hash, name_equal> members;
+        std::vector< cvc5::Term > members_as_vec;
 
         int rule_count;
+        int assert_count;
 
-        void print_elements( void );
+        void print_elements( void ) const;
         void initialize_spec( void );
         void process_primitives( void );
+
+        int get_rule_count( void );
+        int get_assert_count( void );
 
         //helpers
         cvc5::Term eval_atom( const spec::atom_var & val );

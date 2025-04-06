@@ -178,7 +178,6 @@ module :  MODULE WORD IS data body zom_assertions END WORD
 {
     spec::token t = spec::token( node_kind::module );
 
-    // TODO: move vec
     spec_parts sp;
     sp.data         = std::move( $4 );
     sp.body         = std::move( $5 );

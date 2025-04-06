@@ -27,7 +27,7 @@ spec::token::token( node_kind kind , std::string & name ) : next( spec::undefine
 }
 
 
-void spec::file::print_elements( void )
+void spec::file::print_elements( void ) const
 {
     using namespace spec;
 
@@ -206,7 +206,8 @@ void spec::file::initialize_spec( void )
 
     this->slv->setLogic("ALL");
 
-    this->rule_count = 0;
+    this->rule_count    = 0;
+    this->assert_count  = 0;
 }
 
 void spec::file::process_primitives( void )
@@ -218,6 +219,16 @@ void spec::file::process_primitives( void )
         switch ( e.kind )
         {
             case module: {
+                spec_parts sp = std::get< spec_parts >( e.val );
+                this->slv->push();
+                {
+                    cvc5::Term inv_f = this->slv->synthFun(
+                        "inv-f",
+                        this->members_as_vec,
+                        this->tm->getBooleanSort()
+                    );
+                }
+                this->slv->pop();
 
             }; break;
             case named_decl: {
@@ -263,7 +274,9 @@ void spec::file::process_primitives( void )
                     std::string sort_label = std::move( std::get< string_pair >(this->elems[ decl ].val).second );
                     cvc5::Sort sort = this->known_sorts[ sort_label ];
 
-                    this->members[ mem_name ] = this->tm->mkVar( sort , mem_name );
+                    cvc5::Term mem = this->tm->mkVar( sort , mem_name );
+                    this->members[ mem_name ] = mem;
+                    this->members_as_vec.push_back( mem );
                 }
 
             }; break;
@@ -286,15 +299,10 @@ void spec::file::process_primitives( void )
                     init_terms.emplace_back( t );
                 }
 
-                std::vector< cvc5::Term > temp_members;
-                for ( const auto & [ _ , term ] : this->members )
-                {
-                    temp_members.push_back( term );
-                }
                 cvc5::Term init_term = this->and_all( init_terms );
                 e.term = this->slv->defineFun(
                     "members_init",
-                    temp_members,
+                    this->members_as_vec,
                     this->tm->getBooleanSort(),
                     init_term
                 );
@@ -305,12 +313,11 @@ void spec::file::process_primitives( void )
             }; break;
             case rule: {
                 std::string rule_name;
-                if ( e.name.empty() ) { rule_name = "rule" + std::to_string( this->rule_count ); }
-                else { rule_name = std::move( e.name ); }
-
-                std::vector< cvc5::Term > temp_members;
-                for ( const auto & [ _ , term ] : this->members ) {
-                    temp_members.push_back( term );
+                if ( e.name.empty() ) {
+                    rule_name = "rule" + std::to_string( this->get_rule_count() );
+                }
+                else {
+                    rule_name = std::move( e.name );
                 }
 
                 std::vector< cvc5::Term > or_thens;
@@ -331,7 +338,7 @@ void spec::file::process_primitives( void )
 
                 this->slv->defineFun(
                     rule_name,
-                    temp_members,
+                    this->members_as_vec,
                     this->tm->getBooleanSort(),
                     rule_block
                 );
@@ -581,9 +588,16 @@ void spec::file::process_primitives( void )
                 for ( const int & assert_id : e.children ) {
                     assertions.push_back( this->elems[ assert_id ].term );
                 }
-                e.term = this->tm->mkTerm(
+                cvc5::Term never_term = this->tm->mkTerm(
                     cvc5::Kind::NOT,
                     { this->and_all( assertions ) }
+                );
+                const std::string never_name = "never" + std::to_string( this->get_assert_count() );
+                e.term = this->slv->defineFun(
+                    never_name,
+                    this->members_as_vec,
+                    this->tm->getBooleanSort(),
+                    never_term
                 );
             }; break;
             case always_assert: {
@@ -591,7 +605,14 @@ void spec::file::process_primitives( void )
                 for ( const int & assert_id : e.children ) {
                     assertions.push_back( this->elems[ assert_id ].term );
                 }
-                e.term = this->and_all( assertions );
+                cvc5::Term always_term = this->and_all( assertions );
+                const std::string always_name = "always" + std::to_string( this->get_assert_count() );
+                e.term = this->slv->defineFun(
+                    always_name,
+                    this->members_as_vec,
+                    this->tm->getBooleanSort(),
+                    always_term
+                );
             }; break;
             case unkown: {
                 LOG_ERR("unkown node, cannot process"); assert(false);
@@ -655,4 +676,15 @@ cvc5::Term spec::file::or_all( const std::vector<cvc5::Term> & vec_terms )
     else {
         return *vec_terms.begin();
     }
+}
+
+int spec::file::get_rule_count( void )
+{
+    this->rule_count += 1;
+    return this->rule_count;
+}
+int spec::file::get_assert_count( void )
+{
+    this->assert_count += 1;
+    return this->assert_count;
 }
