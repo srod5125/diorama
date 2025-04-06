@@ -577,10 +577,21 @@ void spec::file::process_primitives( void )
                 );
             }; break;
             case never_assert: {
-
+                std::vector< cvc5::Term > assertions;
+                for ( const int & assert_id : e.children ) {
+                    assertions.push_back( this->elems[ assert_id ].term );
+                }
+                e.term = this->tm->mkTerm(
+                    cvc5::Kind::NOT,
+                    { this->and_all( assertions ) }
+                );
             }; break;
             case always_assert: {
-
+                std::vector< cvc5::Term > assertions;
+                for ( const int & assert_id : e.children ) {
+                    assertions.push_back( this->elems[ assert_id ].term );
+                }
+                e.term = this->and_all( assertions );
             }; break;
             case unkown: {
                 LOG_ERR("unkown node, cannot process"); assert(false);
