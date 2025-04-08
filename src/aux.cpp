@@ -40,7 +40,7 @@ void spec::file::print_elements( void ) const
             case module: {
                 LOG_NNL( "inits size: ", std::get<spec::spec_parts>(e.val).inits.size() );
                 LOG_NNL( "rules size: ", std::get<spec::spec_parts>(e.val).rules.size() );
-                LOG_NNL( "assert size: ", std::get<spec::spec_parts>(e.val).assertions.size() );
+                LOG_NNL( "assert id: ", std::get<spec::spec_parts>(e.val).assertions );
             }; break;
             case named_decl: {
                 LOG_NNL( std::get<string_pair>(e.val).first, " = ", std::get<string_pair>(e.val).second);
@@ -171,6 +171,9 @@ void spec::file::print_elements( void ) const
             case always_assert: {
 
             }; break;
+            case assertions: {
+
+            }; break;
             case unkown: {
                 LOG_ERR("node i" , e.id , "does not exist");
                 assert(false);
@@ -210,7 +213,15 @@ void spec::file::initialize_spec( void )
     this->assert_count  = 0;
 }
 
-void spec::file::process_primitives( void )
+/*
+    The elements are appendened in a post order way
+    so we can process them in one fell swoop since we know
+    non ternal nodes that are constructed at a later point will
+    have a higher id than terminals
+
+    In this pas we construct the invariant
+*/
+void spec::file::invariant_pass( void )
 {
     std::vector< int > unkown_records;
 
@@ -232,7 +243,7 @@ void spec::file::process_primitives( void )
                         inv_f,
                         this->elems[ sp.inits[0] ].term,
                         this->elems[ sp.rules[0] ].term,
-                        this->elems[ sp.assertions[0] ].term
+                        this->elems[ sp.assertions ].term
                     );
 
                 }
@@ -599,34 +610,33 @@ void spec::file::process_primitives( void )
                 );
             }; break;
             case never_assert: {
-                std::vector< cvc5::Term > assertions;
+                std::vector< cvc5::Term > claims;
                 for ( const int & assert_id : e.children ) {
-                    assertions.push_back( this->elems[ assert_id ].term );
+                    claims.push_back( this->elems[ assert_id ].term );
                 }
-                cvc5::Term never_term = this->tm->mkTerm(
+                e.term = this->tm->mkTerm(
                     cvc5::Kind::NOT,
-                    { this->and_all( assertions ) }
-                );
-                const std::string never_name = "never" + std::to_string( this->get_assert_count() );
-                e.term = this->slv->defineFun(
-                    never_name,
-                    this->members_as_vec,
-                    this->tm->getBooleanSort(),
-                    never_term
+                    { this->and_all( claims ) }
                 );
             }; break;
             case always_assert: {
-                std::vector< cvc5::Term > assertions;
+                std::vector< cvc5::Term > claims;
                 for ( const int & assert_id : e.children ) {
-                    assertions.push_back( this->elems[ assert_id ].term );
+                    claims.push_back( this->elems[ assert_id ].term );
                 }
-                cvc5::Term always_term = this->and_all( assertions );
-                const std::string always_name = "always" + std::to_string( this->get_assert_count() );
+                e.term = this->and_all( claims );
+            }; break;
+            case assertions: {
+                std::vector< cvc5::Term > v_asserts;
+                for ( const int c : e.children ){
+                    v_asserts.push_back( this->elems[ c ].term );
+                }
+                cvc5::Term all_asserts = this->and_all( v_asserts );
                 e.term = this->slv->defineFun(
-                    always_name,
+                    "post",
                     this->members_as_vec,
                     this->tm->getBooleanSort(),
-                    always_term
+                    all_asserts
                 );
             }; break;
             case unkown: {

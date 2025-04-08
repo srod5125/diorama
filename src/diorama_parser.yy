@@ -136,14 +136,14 @@ L_BRACE
 R_BRACE
 ;
 
-%type < vec_of_ints > defs inits rules assertions
+%type < vec_of_ints > defs inits rules zow_assertion
 %type < vec_of_ints > zom_schemes wom_rules
 %type < vec_of_ints > zom_inits wom_word_to_structure_mapping
 %type < vec_of_ints > wom_decleration basic_init
 %type < std::vector< std::string > > wom_enums
 %type < int > scheme record_def enum_def members_def
 %type < int > assertion declaration named_decl init
-%type < int > members_init word_to_structure rule
+%type < int > members_init word_to_structure rule assertions
 %type < spec::atom_var > atom structure
 %type < std::string > name_sel
 %type < vec_of_ints > wom_then_blocks
@@ -181,7 +181,7 @@ module :  MODULE WORD IS defs inits rules assertions END WORD
     spec_parts sp;
     sp.inits         = std::move( $5 );
     sp.rules         = std::move( $6 );
-    sp.assertions    = std::move( $7 );
+    sp.assertions    = $7;
 
     t.val = std::move( sp );
     drv.add_to_elements( std::move(t) );
@@ -192,7 +192,14 @@ module :  MODULE WORD IS defs inits rules assertions END WORD
 
 defs            : zom_schemes members_def { $1.push_back( $2 ); merge_vectors( $$ , $1 ); }
 rules           : wom_rules { $$ = std::move( $1 );  }
-assertions      : %empty | assertions assertion { $1.push_back( $2 ); merge_vectors( $$ , $1 ); }
+assertions      : zow_assertion {
+    spec::token t = spec::token( node_kind::assertions );
+    t.children = std::move( $1 );
+
+    $$ = drv.add_to_elements( std::move(t) );
+}
+
+zow_assertion   : %empty | zow_assertion assertion { $1.push_back( $2 ); merge_vectors( $$ , $1 ); }
 
     /* data & schemes */
 zom_schemes : zom_schemes scheme { $1.push_back( $2 ); merge_vectors( $$ , $1 ); }

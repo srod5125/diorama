@@ -37,7 +37,7 @@ int main(int argc, char **argv)
 
     s_file.print_elements();
     s_file.initialize_spec();
-    s_file.process_primitives();
+    s_file.invariant_pass();
 
 
     return status::ok;

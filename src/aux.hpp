@@ -38,14 +38,15 @@ namespace spec
         atom,
         if_stmt, else_if_stmt, else_stmt,
         assignment,
-        never_assert, always_assert
+        never_assert, always_assert,
+        assertions
     };
 
     struct spec_parts
     {
         std::vector< int > inits;
         std::vector< int > rules;
-        std::vector< int > assertions;
+        int assertions;
     };
 
     using string_pair = std::pair< std::string, std::string >;
@@ -103,7 +104,7 @@ namespace spec
 
         void print_elements( void ) const;
         void initialize_spec( void );
-        void process_primitives( void );
+        void invariant_pass( void );
 
         int get_rule_count( void );
         int get_assert_count( void );
@@ -157,6 +158,7 @@ const std::unordered_map< spec::node_kind , std::string_view > node_to_name = {
     { spec::node_kind::assignment , "assignment" },
     { spec::node_kind::never_assert , "never_assert" },
     { spec::node_kind::always_assert , "always_assert" },
+    { spec::node_kind::assertions , "assertions" },
 };
 
 #endif
