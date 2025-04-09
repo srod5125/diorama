@@ -1,4 +1,3 @@
-#include "aux.hpp"
 #include "parser.hpp"
 #include "diorama_driver.hpp"
 

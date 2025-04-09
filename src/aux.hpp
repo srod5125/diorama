@@ -86,6 +86,16 @@ namespace spec
 
     const int undefined_id = -1;
 
+    using case_insensitive_string_term_map =
+    std::unordered_map<
+        std::string, cvc5::Term,
+        case_insensitive_hash, case_insensitive_equal
+    >;
+    using case_insensitive_string_sort_map =
+    std::unordered_map<
+        std::string, cvc5::Sort,
+        case_insensitive_hash, case_insensitive_equal
+    >;
     struct file
     {
         std::vector< token > elems;
@@ -93,9 +103,10 @@ namespace spec
         std::unique_ptr< cvc5::TermManager > tm;
         std::unique_ptr< cvc5::Solver > slv;
 
-        std::unordered_map<std::string, cvc5::Sort, name_hash, name_equal> known_sorts;
-        std::unordered_map<std::string, cvc5::Term, name_hash, name_equal> members;
-        std::unordered_map<std::string, cvc5::Term, name_hash, name_equal> members_next;
+        case_insensitive_string_sort_map known_sorts;
+        case_insensitive_string_term_map members;
+        case_insensitive_string_term_map members_next;
+        case_insensitive_string_term_map rule_inv;
 
         std::vector< cvc5::Term > members_as_vec;
 

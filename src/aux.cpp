@@ -230,26 +230,31 @@ void spec::file::invariant_pass( void )
         switch ( e.kind )
         {
             case module: {
-                spec_parts sp = std::get< spec_parts >( e.val );
-                this->slv->push();
-                {
-                    cvc5::Term inv_f = this->slv->synthFun(
-                        "inv-f",
-                        this->members_as_vec,
-                        this->tm->getBooleanSort()
-                    );
+                spec_parts sp = std::move( std::get< spec_parts >( e.val ) );
+                for ( const int rule_id : sp.rules ) {
+                    this->slv->push();
+                    {
+                        cvc5::Term inv_f = this->slv->synthFun(
+                            "inv-f",
+                            this->members_as_vec,
+                            this->tm->getBooleanSort()
+                        );
 
-                    this->slv->addSygusInvConstraint(
-                        inv_f,
-                        this->elems[ sp.inits[0] ].term,
-                        this->elems[ sp.rules[0] ].term,
-                        this->elems[ sp.assertions ].term
-                    );
+                        this->slv->addSygusInvConstraint(
+                            inv_f,
+                            this->elems[ sp.inits[0] ].term,
+                            this->elems[ rule_id ].term,
+                            this->elems[ sp.assertions ].term
+                        );
 
-                    TODO("create unordered map between rules & invariants");
-
+                        if ( this->slv->checkSynth().hasSolution() ){
+                            TODO("cover multiple soutions later");
+                            this->rule_inv[ this->elems[ rule_id ].name ] = \
+                                this->slv->getSynthSolution( inv_f );
+                        }
+                    }
+                    this->slv->pop();
                 }
-                this->slv->pop();
 
             }; break;
             case named_decl: {
@@ -636,14 +641,19 @@ void spec::file::invariant_pass( void )
                 cvc5::Term all_asserts = this->and_all( v_asserts );
 
                 // ----
+                goto skip_for_now_1;
+                TODO("assertion is not well formed, research well formed term");
                 this->slv->push();
-                this->slv->assertFormula( all_asserts );
-                cvc5::Result res = this->slv->checkSat();
-                if ( res.isUnsat() ) {
-                    TODO("perform user report if unsat");
-                    assert(false);
+                {
+                    this->slv->assertFormula( all_asserts );
+                    cvc5::Result res = this->slv->checkSat();
+                    if ( res.isUnsat() ) {
+                        TODO("perform user report if unsat");
+                        assert(false);
+                    }
                 }
                 this->slv->pop();
+                skip_for_now_1:;
                 // ----
 
 
