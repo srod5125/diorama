@@ -107,7 +107,6 @@ namespace spec
         void invariant_pass( void );
 
         int get_rule_count( void );
-        int get_assert_count( void );
 
         //helpers
         cvc5::Term eval_atom( const spec::atom_var & val );

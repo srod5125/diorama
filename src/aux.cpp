@@ -246,6 +246,8 @@ void spec::file::invariant_pass( void )
                         this->elems[ sp.assertions ].term
                     );
 
+                    TODO("create unordered map between rules & invariants");
+
                 }
                 this->slv->pop();
 
@@ -632,12 +634,26 @@ void spec::file::invariant_pass( void )
                     v_asserts.push_back( this->elems[ c ].term );
                 }
                 cvc5::Term all_asserts = this->and_all( v_asserts );
+
+                // ----
+                this->slv->push();
+                this->slv->assertFormula( all_asserts );
+                cvc5::Result res = this->slv->checkSat();
+                if ( res.isUnsat() ) {
+                    TODO("perform user report if unsat");
+                    assert(false);
+                }
+                this->slv->pop();
+                // ----
+
+
                 e.term = this->slv->defineFun(
                     "post",
                     this->members_as_vec,
                     this->tm->getBooleanSort(),
                     all_asserts
                 );
+
             }; break;
             case unkown: {
                 LOG_ERR("unkown node, cannot process"); assert(false);
@@ -707,9 +723,4 @@ int spec::file::get_rule_count( void )
 {
     this->rule_count += 1;
     return this->rule_count;
-}
-int spec::file::get_assert_count( void )
-{
-    this->assert_count += 1;
-    return this->assert_count;
 }
