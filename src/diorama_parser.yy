@@ -136,12 +136,12 @@ L_BRACE
 R_BRACE
 ;
 
-%type < vec_of_ints > defs inits rules zow_assertion
+%type < vec_of_ints > defs rules zow_assertion
 %type < vec_of_ints > zom_schemes wom_rules
 %type < vec_of_ints > zom_inits wom_word_to_structure_mapping
 %type < vec_of_ints > wom_decleration basic_init
 %type < std::vector< std::string > > wom_enums
-%type < int > scheme record_def enum_def members_def
+%type < int > scheme record_def enum_def members_def inits
 %type < int > assertion declaration named_decl init
 %type < int > members_init word_to_structure rule assertions
 %type < spec::atom_var > atom structure
@@ -177,11 +177,16 @@ spec : module
 module :  MODULE WORD IS defs inits rules assertions END WORD
 {
     spec::token t = spec::token( node_kind::module );
+    int assertions_id = $7;
+
+    for ( const int rule_id : $6 ) {
+        drv.s_file.elems[ rule_id ].next = assertions_id;
+    }
 
     spec_parts sp;
-    sp.inits         = std::move( $5 );
+    sp.inits         = $5;
     sp.rules         = std::move( $6 );
-    sp.assertions    = $7;
+    sp.assertions    = assertions_id;
 
     t.val = std::move( sp );
     drv.add_to_elements( std::move(t) );
@@ -264,8 +269,9 @@ wom_types  : wom_types COMMA WORD | WORD
 
 in_or_is : IN | IS
 
-inits : zom_inits members_init { $1.push_back( $2 ); merge_vectors( $$ , $1 );  }
+inits : members_init { $$ = $1;  }
 
+// TODO: inits should just be definitions with defaults
 zom_inits   : %empty | zom_inits init { $1.push_back( $2 ); merge_vectors( $$ , $1 );  }
 
 init : struct_init | array_init

@@ -38,7 +38,7 @@ void spec::file::print_elements( void ) const
         switch ( e.kind )
         {
             case module: {
-                LOG_NNL( "inits size: ", std::get<spec::spec_parts>(e.val).inits.size() );
+                LOG_NNL( "inits size: ", std::get<spec::spec_parts>(e.val).inits );
                 LOG_NNL( "rules size: ", std::get<spec::spec_parts>(e.val).rules.size() );
                 LOG_NNL( "assert id: ", std::get<spec::spec_parts>(e.val).assertions );
             }; break;
@@ -242,7 +242,7 @@ void spec::file::invariant_pass( void )
 
                         this->slv->addSygusInvConstraint(
                             inv_f,
-                            this->elems[ sp.inits[0] ].term,
+                            this->elems[ sp.inits ].term,
                             this->elems[ rule_id ].term,
                             this->elems[ sp.assertions ].term
                         );
@@ -548,25 +548,7 @@ void spec::file::invariant_pass( void )
                     { this->elems[ e.children[0] ].term  } );
             }; break;
             case atom: {
-                if ( e.id == 20 ){
-                    LOG_NNL("x");
-                }
-                if ( std::holds_alternative< int >( e.val ) )
-                {
-                    int x = std::get< int >( e.val );
-                    e.term = this->tm->mkInteger( x );
-                }
-                else if ( std::holds_alternative< bool >( e.val ) )
-                {
-                    bool x = std::get< bool >( e.val );
-                    e.term = this->tm->mkBoolean( x );
-                }
-                else if ( std::holds_alternative< std::string >( e.val ) )
-                {
-                    // std::string_view mem = std::string_view( std::get< std::string >( e.val ) );
-                    // LOG("auto mem:",mem);
-                    e.term = this->members[ std::get< std::string >( e.val ) ];
-                }
+                e.term = this->eval_atom( e.val );
             }; break;
             case if_stmt: {
                 std::vector< cvc5::Term > true_branch_stmts = this->next_stmts( e.next );
@@ -687,11 +669,10 @@ cvc5::Term spec::file::eval_atom( const spec::atom_var & val )
     {
         return this->tm->mkBoolean( std::get< bool >(val) );
     }
-    // else if ( std::holds_alternative< std::string >( val ) )
-    // {
-    //     LOG( std::get<std::string>(val) );
-    //     TODO("return user defined sort");
-    // }
+    else if ( std::holds_alternative< std::string >( val ) )
+    {
+        return this->members[ std::get< std::string >( val ) ];
+    }
     else
     {
         LOG_ERR("unreachable node in eval");

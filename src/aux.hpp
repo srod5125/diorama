@@ -44,7 +44,7 @@ namespace spec
 
     struct spec_parts
     {
-        std::vector< int > inits;
+        int inits;
         std::vector< int > rules;
         int assertions;
     };
@@ -72,6 +72,7 @@ namespace spec
 
         atom_var val;
         int next;
+        int prev;
 
         // TODO: maybe wrap in union
         cvc5::Term term;
@@ -116,6 +117,9 @@ namespace spec
         void print_elements( void ) const;
         void initialize_spec( void );
         void invariant_pass( void );
+        void set_prevs( void );
+        void wp_pass( void );
+
 
         int get_rule_count( void );
 
