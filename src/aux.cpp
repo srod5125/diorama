@@ -659,6 +659,16 @@ void spec::file::invariant_pass( void )
 
 }
 
+void spec::file::set_prevs( void )
+{
+    for ( auto & e : this->elems )
+    {
+        if ( e.next != spec::undefined_id ) {
+            this->elems[ e.next ].prev = e.id;
+        }
+    }
+}
+
 cvc5::Term spec::file::eval_atom( const spec::atom_var & val )
 {
     if ( std::holds_alternative< int >( val ) )

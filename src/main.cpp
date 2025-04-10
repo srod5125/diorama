@@ -38,6 +38,7 @@ int main(int argc, char **argv)
     s_file.print_elements();
     s_file.initialize_spec();
     s_file.invariant_pass();
+    s_file.set_prevs();
 
 
     return status::ok;
